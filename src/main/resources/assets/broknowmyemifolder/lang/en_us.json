@@ -1,0 +1,12 @@
+{
+  "emi_group.broknowmyemifolder.ores": "Ores",
+  "emi_group.broknowmyemifolder.tools": "Tools",
+  "emi_group.broknowmyemifolder.boats": "Boats",
+  "emi_group.broknowmyemifolder.fluids": "Fluids",
+  "tooltip.broknowmyemifolder.folded_entries": "%s folded entries",
+  "tooltip.broknowmyemifolder.click_to_expand": "Click to expand",
+  "tooltip.broknowmyemifolder.alt_click_to_collapse": "Alt-click to collapse %s",
+  "tooltip.broknowmyemifolder.member_of_groups": "Folded groups:",
+  "tooltip.broknowmyemifolder.preview_entry": "- %s",
+  "tooltip.broknowmyemifolder.more_entries": "..."
+}

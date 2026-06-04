@@ -1,0 +1,12 @@
+{
+  "emi_group.broknowmyemifolder.ores": "矿石",
+  "emi_group.broknowmyemifolder.tools": "工具",
+  "emi_group.broknowmyemifolder.boats": "船",
+  "emi_group.broknowmyemifolder.fluids": "流体",
+  "tooltip.broknowmyemifolder.folded_entries": "%s 个折叠条目",
+  "tooltip.broknowmyemifolder.click_to_expand": "点击展开",
+  "tooltip.broknowmyemifolder.alt_click_to_collapse": "Alt+点击收起 %s",
+  "tooltip.broknowmyemifolder.member_of_groups": "所属折叠组：",
+  "tooltip.broknowmyemifolder.preview_entry": "- %s",
+  "tooltip.broknowmyemifolder.more_entries": "..."
+}

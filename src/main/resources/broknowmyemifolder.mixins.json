@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.github.broknowmyorg.bkmef.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+  ],
+  "client": [
+    "EmiScreenManagerMixin",
+    "EmiScreenSpaceMixin",
+    "EmiSearchWorkerMixin",
+    "EmiSidebarsMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
