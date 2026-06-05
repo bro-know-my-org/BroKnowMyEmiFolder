@@ -28,6 +28,11 @@ RecipeViewerEvents.fold(event => {
     spread: 4,
     color: 'rainbow'
   })
+  event.foldSpawnEggs('broknowmyemifolder:spawn_eggs', 'Spawn Eggs', {
+    spread: 4,
+    color: 'random'
+  })
+  event.unfoldAll('quark:seed_pouch')
 })
 ```
 
@@ -42,7 +47,19 @@ event.foldFluid(id, name, filter, options?)
 event.foldFluid(name, filter, options?)
 event.foldId(id, name, ids, options?)
 event.foldId(name, ids, options?)
+event.foldSpawnEggs(id, name, options?)
+event.foldSpawnEggs(name, options?)
+event.unfold(groupId, filter)
+event.unfoldFluid(groupId, filter)
+event.unfoldId(groupId, ids)
+event.unfoldAll(filter)
+event.unfoldAllFluid(filter)
+event.unfoldAllId(ids)
 ```
+
+`unfold` removes matching entries from one fold group. `unfoldAll` removes matching entries from every fold group.
+
+`foldSpawnEggs` folds items implemented as Minecraft `SpawnEggItem`, independent of item id naming.
 
 Options:
 
@@ -87,6 +104,11 @@ RecipeViewerEvents.fold(event => {
     spread: 4,
     color: 'rainbow'
   })
+  event.foldSpawnEggs('broknowmyemifolder:spawn_eggs', '刷怪蛋', {
+    spread: 4,
+    color: 'random'
+  })
+  event.unfoldAll('quark:seed_pouch')
 })
 ```
 
@@ -101,7 +123,19 @@ event.foldFluid(id, name, filter, options?)
 event.foldFluid(name, filter, options?)
 event.foldId(id, name, ids, options?)
 event.foldId(name, ids, options?)
+event.foldSpawnEggs(id, name, options?)
+event.foldSpawnEggs(name, options?)
+event.unfold(groupId, filter)
+event.unfoldFluid(groupId, filter)
+event.unfoldId(groupId, ids)
+event.unfoldAll(filter)
+event.unfoldAllFluid(filter)
+event.unfoldAllId(ids)
 ```
+
+`unfold` 会把匹配条目从指定折叠组里拿出来。`unfoldAll` 会把匹配条目从所有折叠组里拿出来。
+
+`foldSpawnEggs` 会折叠底层实现为 Minecraft `SpawnEggItem` 的物品，不依赖物品 id 是否以 `_spawn_egg` 结尾。
 
 可选参数：
 
