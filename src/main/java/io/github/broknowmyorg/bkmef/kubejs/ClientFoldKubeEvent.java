@@ -93,6 +93,24 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
     }
 
     @Override
+    public void foldMod(Context cx, Object name, Object mods) {
+        foldMod(cx, name, mods, null);
+    }
+
+    @Override
+    public void foldMod(Context cx, Object name, Object mods, Object options) {
+        Component component = toComponent(name);
+        ResourceLocation id = toConfiguredId(cx, options, component);
+        add(id, component, modMatcher(mods), toOptions(cx, options, id));
+    }
+
+    @Override
+    public void foldMod(Context cx, Object id, Object name, Object mods, Object options) {
+        ResourceLocation groupId = toId(id);
+        add(groupId, toComponent(name), modMatcher(mods), toOptions(cx, options, groupId));
+    }
+
+    @Override
     public void foldSpawnEggs(Context cx, Object name) {
         foldSpawnEggs(cx, name, null);
     }
@@ -174,6 +192,15 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         return stack -> stack.getId() != null && idSet.contains(stack.getId());
     }
 
+    static Predicate<EmiStack> modMatcher(Object mods) {
+        Set<String> namespaces = new HashSet<>();
+        for (Object mod : ListJS.orSelf(mods)) {
+            namespaces.add(normalizeModId(String.valueOf(mod)));
+        }
+
+        return stack -> stack.getId() != null && namespaces.contains(stack.getId().getNamespace().toLowerCase(Locale.ROOT));
+    }
+
     static Predicate<EmiStack> spawnEggMatcher() {
         return stack -> {
             ItemStack itemStack = stack.getItemStack();
@@ -206,6 +233,14 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
 
     private static ResourceLocation toId(Object id) {
         return ResourceLocation.parse(String.valueOf(id));
+    }
+
+    private static String normalizeModId(String mod) {
+        String string = mod.trim();
+        if (string.startsWith("@")) {
+            string = string.substring(1);
+        }
+        return string.toLowerCase(Locale.ROOT);
     }
 
     private FoldDisplayOptions toOptions(Context cx, Object options, ResourceLocation id) {

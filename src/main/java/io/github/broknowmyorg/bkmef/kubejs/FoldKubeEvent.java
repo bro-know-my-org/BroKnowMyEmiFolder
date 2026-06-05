@@ -82,6 +82,30 @@ public interface FoldKubeEvent extends KubeEvent {
         })
     void foldId(Context cx, Object id, Object name, Object ids, Object options);
 
+    @Info(value = "Defines an item fold group for every EMI stack whose id namespace matches a mod id. A leading @ is accepted, for example '@citadel'.",
+        params = {
+            @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:."),
+            @Param(name = "mods", value = "Single mod id, @modid search-style string, or array of mod ids.")
+        })
+    void foldMod(Context cx, Object name, Object mods);
+
+    @Info(value = "Defines a mod namespace fold group with optional display settings.",
+        params = {
+            @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:."),
+            @Param(name = "mods", value = "Single mod id, @modid search-style string, or array of mod ids."),
+            @Param(name = "options", value = "Optional settings. Supports { spread?: number, color?: number | string, id?: string }.")
+        })
+    void foldMod(Context cx, Object name, Object mods, Object options);
+
+    @Info(value = "Defines a mod namespace fold group with an explicit stable group id.",
+        params = {
+            @Param(name = "id", value = "Stable group id, for example 'modid:hidden_citadel'."),
+            @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:."),
+            @Param(name = "mods", value = "Single mod id, @modid search-style string, or array of mod ids."),
+            @Param(name = "options", value = "Optional settings. Supports { spread?: number, color?: number | string }.")
+        })
+    void foldMod(Context cx, Object id, Object name, Object mods, Object options);
+
     @Info(value = "Defines an item fold group for all items implemented as Minecraft SpawnEggItem, independent of item id naming.",
         params = {
             @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:.")
