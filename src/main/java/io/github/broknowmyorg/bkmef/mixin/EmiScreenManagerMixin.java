@@ -3,6 +3,7 @@ package io.github.broknowmyorg.bkmef.mixin;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.config.SidebarType;
 import dev.emi.emi.input.EmiInput;
+import dev.emi.emi.api.stack.EmiStackInteraction;
 import dev.emi.emi.screen.EmiScreenManager;
 import dev.emi.emi.search.EmiSearch;
 import io.github.broknowmyorg.bkmef.emi.ExpandedFoldEmiIngredient;
@@ -24,7 +25,7 @@ public class EmiScreenManagerMixin {
             return;
         }
 
-        var hovered = EmiScreenManager.getHoveredStack((int) mouseX, (int) mouseY, false);
+        EmiStackInteraction hovered = EmiScreenManager.getHoveredStack((int) mouseX, (int) mouseY, false);
         if (!(hovered instanceof EmiScreenManager.SidebarEmiStackInteraction sidebar) || sidebar.getType() != SidebarType.INDEX) {
             return;
         }

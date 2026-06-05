@@ -81,4 +81,64 @@ public interface FoldKubeEvent extends KubeEvent {
             @Param(name = "options", value = "Optional settings. Supports { spread?: number, color?: number | string }.")
         })
     void foldId(Context cx, Object id, Object name, Object ids, Object options);
+
+    @Info(value = "Defines an item fold group for all items implemented as Minecraft SpawnEggItem, independent of item id naming.",
+        params = {
+            @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:.")
+        })
+    void foldSpawnEggs(Context cx, Object name);
+
+    @Info(value = "Defines a SpawnEggItem fold group with optional display settings.",
+        params = {
+            @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:."),
+            @Param(name = "options", value = "Optional settings. Supports { spread?: number, color?: number | string, id?: string }.")
+        })
+    void foldSpawnEggs(Context cx, Object name, Object options);
+
+    @Info(value = "Defines a SpawnEggItem fold group with an explicit stable group id.",
+        params = {
+            @Param(name = "id", value = "Stable group id, for example 'modid:spawn_eggs'."),
+            @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:."),
+            @Param(name = "options", value = "Optional settings. Supports { spread?: number, color?: number | string }.")
+        })
+    void foldSpawnEggs(Context cx, Object id, Object name, Object options);
+
+    @Info(value = "Prevents matching item entries from being folded by the specified fold group.",
+        params = {
+            @Param(name = "groupId", value = "Stable fold group id, for example 'modid:tools'."),
+            @Param(name = "filter", value = "KubeJS item ingredient, item id, tag, or ingredient array.")
+        })
+    void unfold(Context cx, Object groupId, Object filter);
+
+    @Info(value = "Prevents matching fluid entries from being folded by the specified fold group.",
+        params = {
+            @Param(name = "groupId", value = "Stable fold group id, for example 'modid:fluids'."),
+            @Param(name = "filter", value = "KubeJS fluid ingredient, fluid id, or tag.")
+        })
+    void unfoldFluid(Context cx, Object groupId, Object filter);
+
+    @Info(value = "Prevents exact EMI stack ids from being folded by the specified fold group.",
+        params = {
+            @Param(name = "groupId", value = "Stable fold group id, for example 'modid:books'."),
+            @Param(name = "ids", value = "Single id or array of ids matched against EmiStack#getId().")
+        })
+    void unfoldId(Context cx, Object groupId, Object ids);
+
+    @Info(value = "Prevents matching item entries from being folded by any fold group.",
+        params = {
+            @Param(name = "filter", value = "KubeJS item ingredient, item id, tag, or ingredient array.")
+        })
+    void unfoldAll(Context cx, Object filter);
+
+    @Info(value = "Prevents matching fluid entries from being folded by any fold group.",
+        params = {
+            @Param(name = "filter", value = "KubeJS fluid ingredient, fluid id, or tag.")
+        })
+    void unfoldAllFluid(Context cx, Object filter);
+
+    @Info(value = "Prevents exact EMI stack ids from being folded by any fold group.",
+        params = {
+            @Param(name = "ids", value = "Single id or array of ids matched against EmiStack#getId().")
+        })
+    void unfoldAllId(Context cx, Object ids);
 }

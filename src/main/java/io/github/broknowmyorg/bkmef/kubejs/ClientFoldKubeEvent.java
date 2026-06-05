@@ -12,6 +12,8 @@ import io.github.broknowmyorg.bkmef.emi.FoldDisplayOptions;
 import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
@@ -90,11 +92,68 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         add(groupId, toComponent(name), idMatcher(ids), toOptions(cx, options, groupId));
     }
 
+    @Override
+    public void foldSpawnEggs(Context cx, Object name) {
+        foldSpawnEggs(cx, name, null);
+    }
+
+    @Override
+    public void foldSpawnEggs(Context cx, Object name, Object options) {
+        Component component = toComponent(name);
+        ResourceLocation id = toConfiguredId(cx, options, component);
+        add(id, component, spawnEggMatcher(), toOptions(cx, options, id));
+    }
+
+    @Override
+    public void foldSpawnEggs(Context cx, Object id, Object name, Object options) {
+        ResourceLocation groupId = toId(id);
+        add(groupId, toComponent(name), spawnEggMatcher(), toOptions(cx, options, groupId));
+    }
+
+    @Override
+    public void unfold(Context cx, Object groupId, Object filter) {
+        FoldRegistry.unfold(toId(groupId), itemMatcher(cx, filter));
+    }
+
+    @Override
+    public void unfoldFluid(Context cx, Object groupId, Object filter) {
+        FoldRegistry.unfold(toId(groupId), fluidMatcher(cx, filter));
+    }
+
+    @Override
+    public void unfoldId(Context cx, Object groupId, Object ids) {
+        FoldRegistry.unfold(toId(groupId), idMatcher(ids));
+    }
+
+    @Override
+    public void unfoldAll(Context cx, Object filter) {
+        FoldRegistry.unfoldAll(itemMatcher(cx, filter));
+    }
+
+    @Override
+    public void unfoldAllFluid(Context cx, Object filter) {
+        FoldRegistry.unfoldAll(fluidMatcher(cx, filter));
+    }
+
+    @Override
+    public void unfoldAllId(Context cx, Object ids) {
+        FoldRegistry.unfoldAll(idMatcher(ids));
+    }
+
     static Predicate<EmiStack> itemMatcher(Context cx, Object filter) {
         ItemPredicate ingredient = (ItemPredicate) RecipeViewerEntryType.ITEM.wrapPredicate(cx, filter);
+        ItemStack[] entries = ingredient.kjs$getStackArray();
         return stack -> {
-            var itemStack = stack.getItemStack();
-            return !itemStack.isEmpty() && ingredient.test(itemStack);
+            ItemStack itemStack = stack.getItemStack();
+            if (itemStack.isEmpty()) {
+                return false;
+            }
+            for (ItemStack entry : entries) {
+                if (ItemStack.isSameItemSameComponents(entry, itemStack)) {
+                    return true;
+                }
+            }
+            return ingredient.test(itemStack);
         };
     }
 
@@ -113,6 +172,13 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         }
 
         return stack -> stack.getId() != null && idSet.contains(stack.getId());
+    }
+
+    static Predicate<EmiStack> spawnEggMatcher() {
+        return stack -> {
+            ItemStack itemStack = stack.getItemStack();
+            return !itemStack.isEmpty() && itemStack.getItem() instanceof SpawnEggItem;
+        };
     }
 
     static void add(ResourceLocation id, Component component, Predicate<EmiStack> matcher) {

@@ -7,10 +7,13 @@ import dev.emi.emi.search.EmiSearch;
 import dev.latvian.mods.kubejs.client.KubeSessionData;
 import dev.latvian.mods.kubejs.plugin.builtin.event.RecipeViewerEvents;
 import dev.latvian.mods.kubejs.recipe.viewer.RecipeViewerEntryType;
+import dev.latvian.mods.kubejs.recipe.viewer.server.FluidData;
+import dev.latvian.mods.kubejs.recipe.viewer.server.ItemData;
 import dev.latvian.mods.kubejs.recipe.viewer.server.RecipeViewerData;
 import dev.latvian.mods.kubejs.script.ScriptType;
 import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -59,7 +62,7 @@ public final class KubeFoldRegistrar {
     }
 
     private static RecipeViewerData currentRemoteData() {
-        var sessionData = KubeSessionData.of(Minecraft.getInstance());
+        KubeSessionData sessionData = KubeSessionData.of(Minecraft.getInstance());
         return sessionData == null ? null : sessionData.recipeViewerData;
     }
 
@@ -68,17 +71,17 @@ public final class KubeFoldRegistrar {
             return;
         }
 
-        for (var group : remote.itemData().groupedEntries()) {
+        for (ItemData.Group group : remote.itemData().groupedEntries()) {
             ClientFoldKubeEvent.add(group.groupId(), group.description(), itemMatcher(group.filter()));
         }
-        for (var group : remote.fluidData().groupedEntries()) {
+        for (FluidData.Group group : remote.fluidData().groupedEntries()) {
             ClientFoldKubeEvent.add(group.groupId(), group.description(), fluidMatcher(group.filter()));
         }
     }
 
     private static Predicate<EmiStack> itemMatcher(Ingredient ingredient) {
         return stack -> {
-            var itemStack = stack.getItemStack();
+            ItemStack itemStack = stack.getItemStack();
             return !itemStack.isEmpty() && ingredient.test(itemStack);
         };
     }
