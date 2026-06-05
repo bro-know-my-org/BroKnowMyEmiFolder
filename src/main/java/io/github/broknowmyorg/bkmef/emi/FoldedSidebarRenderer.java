@@ -6,6 +6,7 @@ import dev.emi.emi.screen.EmiScreenManager;
 import dev.emi.emi.screen.StackBatcher;
 import net.minecraft.client.gui.GuiGraphics;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class FoldedSidebarRenderer {
@@ -13,6 +14,8 @@ public final class FoldedSidebarRenderer {
     private static final int ICON_SIZE = 16;
     private static final int SLOT_PADDING = 1;
     private static final int CARD_RENDER_FLAGS = -1 ^ EmiIngredient.RENDER_AMOUNT;
+    private static final float MIN_CARD_Z_OFFSET = 1.0F;
+    private static final float CARD_Z_RANGE = 80.0F;
 
     private FoldedSidebarRenderer() {
     }
@@ -46,6 +49,7 @@ public final class FoldedSidebarRenderer {
         int row = rowForLocalOffset(space, primaryPageOffset);
         int rowStart = rowStartOffset(space, row);
         int pixel = (primaryPageOffset - rowStart) * ENTRY_SIZE;
+        List<RenderedCard> cards = new ArrayList<>();
 
         for (int i = 0; i < stacks.size(); i++) {
             while (row < space.th && pixel + SLOT_PADDING + ICON_SIZE > space.getWidth(row) * ENTRY_SIZE) {
@@ -65,15 +69,29 @@ public final class FoldedSidebarRenderer {
             int iconY = space.getY(targetColumn, row) + SLOT_PADDING;
 
             if (targetSlot == currentSlotIndex) {
-                renderCard(stacks.get(i), draw, iconX, iconY, options.fillColor(), delta, i + 1);
+                cards.add(new RenderedCard(stacks.get(i), iconX, iconY, i, stacks.size()));
             } else if (targetSlot > currentSlotIndex) {
-                return;
+                break;
             }
             pixel += options.spread();
         }
+
+        renderCardsInSlot(cards, draw, options.fillColor(), delta);
     }
 
-    private static void renderCard(EmiStack stack, GuiGraphics draw, int iconX, int iconY, int fillColor, float delta, int zOffset) {
+    private static void renderCardsInSlot(List<RenderedCard> cards, GuiGraphics draw, int fillColor, float delta) {
+        if (cards.isEmpty()) {
+            return;
+        }
+
+        for (RenderedCard card : cards) {
+            float zStep = CARD_Z_RANGE / (card.totalCards() + 1);
+            float zOffset = MIN_CARD_Z_OFFSET + (card.totalCards() - card.stackIndex()) * zStep;
+            renderCard(card.stack(), draw, card.iconX(), card.iconY(), fillColor, delta, zOffset);
+        }
+    }
+
+    private static void renderCard(EmiStack stack, GuiGraphics draw, int iconX, int iconY, int fillColor, float delta, float zOffset) {
         draw.pose().pushPose();
         draw.pose().translate(0, 0, zOffset);
         renderCardFill(draw, iconX, iconY, fillColor);
@@ -120,5 +138,8 @@ public final class FoldedSidebarRenderer {
             offset += space.getWidth(i);
         }
         return offset;
+    }
+
+    private record RenderedCard(EmiStack stack, int iconX, int iconY, int stackIndex, int totalCards) {
     }
 }
