@@ -28,6 +28,9 @@ RecipeViewerEvents.fold(event => {
     spread: 4,
     color: 'rainbow'
   })
+  event.foldMod('broknowmyemifolder:citadel', 'translate:emi_group.broknowmyemifolder.citadel', '@citadel', {
+    color: 'random'
+  })
   event.foldSpawnEggs('broknowmyemifolder:spawn_eggs', 'Spawn Eggs', {
     spread: 4,
     color: 'random'
@@ -47,6 +50,8 @@ event.foldFluid(id, name, filter, options?)
 event.foldFluid(name, filter, options?)
 event.foldId(id, name, ids, options?)
 event.foldId(name, ids, options?)
+event.foldMod(id, name, mods, options?)
+event.foldMod(name, mods, options?)
 event.foldSpawnEggs(id, name, options?)
 event.foldSpawnEggs(name, options?)
 event.unfold(groupId, filter)
@@ -58,6 +63,8 @@ event.unfoldAllId(ids)
 ```
 
 `unfold` removes matching entries from one fold group. `unfoldAll` removes matching entries from every fold group.
+
+`foldMod` folds entries by EMI stack id namespace. It accepts mod ids with or without a leading `@`, such as `'@citadel'`.
 
 `foldSpawnEggs` folds items implemented as Minecraft `SpawnEggItem`, independent of item id naming.
 
@@ -104,6 +111,9 @@ RecipeViewerEvents.fold(event => {
     spread: 4,
     color: 'rainbow'
   })
+  event.foldMod('broknowmyemifolder:citadel', 'translate:emi_group.broknowmyemifolder.citadel', '@citadel', {
+    color: 'random'
+  })
   event.foldSpawnEggs('broknowmyemifolder:spawn_eggs', '刷怪蛋', {
     spread: 4,
     color: 'random'
@@ -123,6 +133,8 @@ event.foldFluid(id, name, filter, options?)
 event.foldFluid(name, filter, options?)
 event.foldId(id, name, ids, options?)
 event.foldId(name, ids, options?)
+event.foldMod(id, name, mods, options?)
+event.foldMod(name, mods, options?)
 event.foldSpawnEggs(id, name, options?)
 event.foldSpawnEggs(name, options?)
 event.unfold(groupId, filter)
@@ -134,6 +146,8 @@ event.unfoldAllId(ids)
 ```
 
 `unfold` 会把匹配条目从指定折叠组里拿出来。`unfoldAll` 会把匹配条目从所有折叠组里拿出来。
+
+`foldMod` 会按 EMI stack id 的命名空间折叠条目。它接受带或不带 `@` 前缀的 mod id，例如 `'@citadel'`。
 
 `foldSpawnEggs` 会折叠底层实现为 Minecraft `SpawnEggItem` 的物品，不依赖物品 id 是否以 `_spawn_egg` 结尾。
 

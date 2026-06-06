@@ -16,7 +16,10 @@ RecipeViewerEvents.fold(event => {
   })
 
   event.foldFluid('broknowmyemifolder:fluids', 'translate:emi_group.broknowmyemifolder.fluids', '#c:water')
-  event.foldSpawnEggs('broknowmyemifolder:spawn_eggs', 'Spawn Eggs', {
+  event.foldMod('broknowmyemifolder:citadel', 'translate:emi_group.broknowmyemifolder.citadel', '@citadel', {
+    color: 'random'
+  })
+  event.foldSpawnEggs('broknowmyemifolder:spawn_eggs', 'translate:emi_group.broknowmyemifolder.spawn_eggs', {
     spread: 4,
     color: 'random'
   })
@@ -33,6 +36,8 @@ event.foldFluid(id, name, filter, options?)
 event.foldFluid(name, filter, options?)
 event.foldId(id, name, ids, options?)
 event.foldId(name, ids, options?)
+event.foldMod(id, name, mods, options?)
+event.foldMod(name, mods, options?)
 event.foldSpawnEggs(id, name, options?)
 event.foldSpawnEggs(name, options?)
 event.unfold(groupId, filter)
@@ -52,6 +57,8 @@ event.unfoldAllId(ids)
 `filter` for `foldFluid` uses KubeJS fluid ingredient syntax.
 
 `ids` for `foldId` is a single id or an array of ids matched against `EmiStack#getId()`.
+
+`foldMod` matches item entries by the namespace of `EmiStack#getId()`. It accepts a single mod id, an EMI-search-style string with a leading `@`, or an array, for example `'citadel'`, `'@citadel'`, or `['@citadel', 'alexsmobs']`.
 
 `foldSpawnEggs` matches item entries whose item class is Minecraft `SpawnEggItem`. This does not depend on item id naming, so modded spawn eggs with non-standard ids can still be folded. It does not match custom spawn-like items that are not implemented as `SpawnEggItem`; use `fold` or `foldId` for those.
 
@@ -89,3 +96,7 @@ Left-click a collapsed group to expand it. Alt-left-click an expanded member to 
 Entries may belong to multiple fold groups. In the normal EMI index, each matching group may contain the same entry. Search results show a matching entry once and list all owning fold groups in the tooltip.
 
 KubeJS `RecipeViewerEvents.groupEntries` definitions are also consumed as fold groups where practical.
+
+## Full Example
+
+See [`docs/examples/emi_folder.client.js`](examples/emi_folder.client.js) for a heavily commented bilingual client script based on a real modpack setup.
