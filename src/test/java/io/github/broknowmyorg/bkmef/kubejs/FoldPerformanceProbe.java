@@ -2,7 +2,9 @@ package io.github.broknowmyorg.bkmef.kubejs;
 
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
+import io.github.broknowmyorg.bkmef.emi.FoldMatcher;
 import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
+import io.github.broknowmyorg.bkmef.emi.StackFacts;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.core.component.DataComponentPatch;
@@ -14,7 +16,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
 
 public final class FoldPerformanceProbe {
     private static final int ENTRIES = Integer.getInteger("bkmef.probe.entries", 20_000);
@@ -76,12 +77,20 @@ public final class FoldPerformanceProbe {
             Set<String> namespaces = Set.of("mod_" + group % 40, "mod_" + (group + 7) % 40);
             Set<ResourceLocation> ids = selectedIds(group, 32);
             int modulo = group % 17;
-            Predicate<EmiStack> matcher = stack -> {
-                ResourceLocation id = stack.getId();
-                return id != null
-                    && namespaces.contains(id.getNamespace())
-                    && !ids.contains(id)
-                    && Math.floorMod(id.getPath().hashCode(), 17) == modulo;
+            FoldMatcher matcher = new FoldMatcher() {
+                @Override
+                public boolean matches(StackFacts facts) {
+                    ResourceLocation id = facts.id();
+                    return id != null
+                        && namespaces.contains(facts.namespace())
+                        && !ids.contains(id)
+                        && Math.floorMod(id.getPath().hashCode(), 17) == modulo;
+                }
+
+                @Override
+                public Set<String> indexedNamespaces() {
+                    return namespaces;
+                }
             };
             FoldRegistry.add(groupId("cheap", group), Component.literal("cheap " + group), matcher);
         }
@@ -91,11 +100,14 @@ public final class FoldPerformanceProbe {
         for (int group = 0; group < GROUPS; group++) {
             int namespaceModulo = 2 + group % 9;
             int pathModulo = 3 + group % 11;
-            Predicate<EmiStack> matcher = stack -> {
-                ResourceLocation id = stack.getId();
-                return id != null
-                    && Math.floorMod(id.getNamespace().hashCode(), namespaceModulo) == 0
-                    && Math.floorMod(id.getPath().hashCode(), pathModulo) == 0;
+            FoldMatcher matcher = new FoldMatcher() {
+                @Override
+                public boolean matches(StackFacts facts) {
+                    ResourceLocation id = facts.id();
+                    return id != null
+                        && Math.floorMod(facts.namespace().hashCode(), namespaceModulo) == 0
+                        && Math.floorMod(id.getPath().hashCode(), pathModulo) == 0;
+                }
             };
             FoldRegistry.add(groupId("wide", group), Component.literal("wide " + group), matcher);
         }

@@ -93,6 +93,7 @@ dependencies {
 tasks.register("foldPerformanceProbe", JavaExec) {
     group = "verification"
     description = "Runs a synthetic BKMEF fold index performance probe."
+    notCompatibleWithConfigurationCache("Reads bkmef.probe.* system properties at execution setup time.")
     classpath = sourceSets.test.runtimeClasspath
     mainClass = "io.github.broknowmyorg.bkmef.kubejs.FoldPerformanceProbe"
     javaLauncher = javaToolchains.launcherFor {

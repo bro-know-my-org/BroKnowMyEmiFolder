@@ -9,17 +9,16 @@ import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.Wrapper;
 import io.github.broknowmyorg.bkmef.Broknowmyemifolder;
 import io.github.broknowmyorg.bkmef.emi.FoldDisplayOptions;
+import io.github.broknowmyorg.bkmef.emi.FoldMatcher;
 import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
+import io.github.broknowmyorg.bkmef.emi.StackFacts;
 import net.minecraft.network.chat.Component;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -167,16 +166,16 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         FoldRegistry.unfoldAll(idMatcher(ids));
     }
 
-    static Predicate<EmiStack> itemMatcher(Context cx, Object filter) {
-        Predicate<EmiStack> structured = structuredItemMatcher(cx, filter);
+    static FoldMatcher itemMatcher(Context cx, Object filter) {
+        FoldMatcher structured = structuredItemMatcher(cx, filter);
         if (structured != null) {
             return structured;
         }
 
         ItemPredicate ingredient = (ItemPredicate) RecipeViewerEntryType.ITEM.wrapPredicate(cx, filter);
         ItemStack[] entries = ingredient.kjs$getStackArray();
-        return stack -> {
-            ItemStack itemStack = stack.getItemStack();
+        return facts -> {
+            ItemStack itemStack = facts.itemStack();
             if (itemStack.isEmpty()) {
                 return false;
             }
@@ -189,13 +188,13 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         };
     }
 
-    private static Predicate<EmiStack> structuredItemMatcher(Context cx, Object filter) {
+    private static FoldMatcher structuredItemMatcher(Context cx, Object filter) {
         Object options = Wrapper.unwrapped(filter);
         if (!isStructuredItemFilter(cx, options)) {
             return null;
         }
 
-        ArrayList<Predicate<EmiStack>> matchers = new ArrayList<>();
+        ArrayList<FoldMatcher> matchers = new ArrayList<>();
         addFilterMatcher(cx, options, matchers, "id", ClientFoldKubeEvent::idMatcher);
         addFilterMatcher(cx, options, matchers, "ids", ClientFoldKubeEvent::idMatcher);
         addFilterMatcher(cx, options, matchers, "mod", ClientFoldKubeEvent::modMatcher);
@@ -214,14 +213,7 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         addFilterMatcher(cx, options, matchers, "item", ClientFoldKubeEvent::itemMatcher);
         addFilterMatcher(cx, options, matchers, "ingredient", ClientFoldKubeEvent::itemMatcher);
 
-        return stack -> {
-            for (Predicate<EmiStack> matcher : matchers) {
-                if (!matcher.test(stack)) {
-                    return false;
-                }
-            }
-            return true;
-        };
+        return allOf(matchers);
     }
 
     private static boolean isStructuredItemFilter(Context cx, Object options) {
@@ -247,49 +239,43 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
             || hasOption(cx, options, "spawnEggs");
     }
 
-    private static void addFilterMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers, String key, ContextMatcherFactory factory) {
+    private static void addFilterMatcher(Context cx, Object options, ArrayList<FoldMatcher> matchers, String key, ContextMatcherFactory factory) {
         if (hasOption(cx, options, key)) {
             matchers.add(factory.create(cx, getOption(cx, options, key)));
         }
     }
 
-    private static void addFilterMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers, String key, MatcherFactory factory) {
+    private static void addFilterMatcher(Context cx, Object options, ArrayList<FoldMatcher> matchers, String key, MatcherFactory factory) {
         if (hasOption(cx, options, key)) {
             matchers.add(factory.create(getOption(cx, options, key)));
         }
     }
 
-    private static void addSpawnEggMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers) {
+    private static void addSpawnEggMatcher(Context cx, Object options, ArrayList<FoldMatcher> matchers) {
         if (hasOption(cx, options, "spawnEggs")) {
             Object spawnEggs = getOption(cx, options, "spawnEggs");
-            Predicate<EmiStack> matcher = spawnEggMatcher();
-            matchers.add(Boolean.FALSE.equals(spawnEggs) ? matcher.negate() : matcher);
+            FoldMatcher matcher = spawnEggMatcher();
+            matchers.add(Boolean.FALSE.equals(spawnEggs) ? facts -> !matcher.matches(facts) : matcher);
         }
     }
 
-    private static void addNegatedFilterMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers, String key) {
+    private static void addNegatedFilterMatcher(Context cx, Object options, ArrayList<FoldMatcher> matchers, String key) {
         if (hasOption(cx, options, key)) {
-            matchers.add(anyMatcher(cx, getOption(cx, options, key)).negate());
+            FoldMatcher matcher = anyMatcher(cx, getOption(cx, options, key));
+            matchers.add(facts -> !matcher.matches(facts));
         }
     }
 
-    private static Predicate<EmiStack> allMatcher(Context cx, Object filters) {
-        ArrayList<Predicate<EmiStack>> matchers = itemMatchers(cx, filters);
-        return stack -> {
-            for (Predicate<EmiStack> matcher : matchers) {
-                if (!matcher.test(stack)) {
-                    return false;
-                }
-            }
-            return true;
-        };
+    private static FoldMatcher allMatcher(Context cx, Object filters) {
+        ArrayList<FoldMatcher> matchers = itemMatchers(cx, filters);
+        return allOf(matchers);
     }
 
-    private static Predicate<EmiStack> anyMatcher(Context cx, Object filters) {
-        ArrayList<Predicate<EmiStack>> matchers = itemMatchers(cx, filters);
-        return stack -> {
-            for (Predicate<EmiStack> matcher : matchers) {
-                if (matcher.test(stack)) {
+    private static FoldMatcher anyMatcher(Context cx, Object filters) {
+        ArrayList<FoldMatcher> matchers = itemMatchers(cx, filters);
+        return facts -> {
+            for (FoldMatcher matcher : matchers) {
+                if (matcher.matches(facts)) {
                     return true;
                 }
             }
@@ -297,8 +283,8 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         };
     }
 
-    private static ArrayList<Predicate<EmiStack>> itemMatchers(Context cx, Object filters) {
-        ArrayList<Predicate<EmiStack>> matchers = new ArrayList<>();
+    private static ArrayList<FoldMatcher> itemMatchers(Context cx, Object filters) {
+        ArrayList<FoldMatcher> matchers = new ArrayList<>();
         for (Object filter : ListJS.orSelf(filters)) {
             matchers.add(itemMatcher(cx, filter));
         }
@@ -314,24 +300,30 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         };
     }
 
-    static Predicate<EmiStack> idMatcher(Object ids) {
+    static FoldMatcher idMatcher(Object ids) {
         Set<ResourceLocation> idSet = new HashSet<>();
         for (Object id : ListJS.orSelf(ids)) {
             idSet.add(ResourceLocation.parse(String.valueOf(id)));
         }
 
-        return stack -> stack.getId() != null && idSet.contains(stack.getId());
+        return new FoldMatcher() {
+            @Override
+            public boolean matches(StackFacts facts) {
+                return facts.id() != null && idSet.contains(facts.id());
+            }
+
+            @Override
+            public Set<ResourceLocation> indexedIds() {
+                return idSet;
+            }
+        };
     }
 
-    static Predicate<EmiStack> itemTagMatcher(Object tags) {
+    static FoldMatcher itemTagMatcher(Object tags) {
         Set<TagKey<Item>> tagSet = itemTags(tags);
-        return stack -> {
-            ItemStack itemStack = stack.getItemStack();
-            if (itemStack.isEmpty()) {
-                return false;
-            }
+        return facts -> {
             for (TagKey<Item> tag : tagSet) {
-                if (itemStack.is(tag)) {
+                if (facts.itemIn(tag)) {
                     return true;
                 }
             }
@@ -339,36 +331,34 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         };
     }
 
-    static Predicate<EmiStack> modMatcher(Object mods) {
+    static FoldMatcher modMatcher(Object mods) {
         Set<String> namespaces = new HashSet<>();
         for (Object mod : ListJS.orSelf(mods)) {
             namespaces.add(normalizeModId(String.valueOf(mod)));
         }
 
-        return stack -> stack.getId() != null && namespaces.contains(stack.getId().getNamespace());
+        return new FoldMatcher() {
+            @Override
+            public boolean matches(StackFacts facts) {
+                return facts.id() != null && namespaces.contains(facts.namespace());
+            }
+
+            @Override
+            public Set<String> indexedNamespaces() {
+                return namespaces;
+            }
+        };
     }
 
-    static Predicate<EmiStack> blockMatcher(Object blocks) {
+    static FoldMatcher blockMatcher(Object blocks) {
         Set<ResourceLocation> blockSet = new HashSet<>();
         for (Object block : ListJS.orSelf(blocks)) {
             blockSet.add(ResourceLocation.parse(String.valueOf(block)));
         }
 
-        return stack -> {
-            Block block = blockOf(stack);
-            return block != null && blockSet.contains(BuiltInRegistries.BLOCK.getKey(block));
-        };
-    }
-
-    static Predicate<EmiStack> blockTagMatcher(Object tags) {
-        Set<TagKey<Block>> tagSet = blockTags(tags);
-        return stack -> {
-            Block block = blockOf(stack);
-            if (block == null) {
-                return false;
-            }
-            for (TagKey<Block> tag : tagSet) {
-                if (block.builtInRegistryHolder().is(tag)) {
+        return facts -> {
+            for (ResourceLocation block : blockSet) {
+                if (facts.blockIs(block)) {
                     return true;
                 }
             }
@@ -376,19 +366,28 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         };
     }
 
-    static Predicate<EmiStack> spawnEggMatcher() {
-        return stack -> {
-            ItemStack itemStack = stack.getItemStack();
-            return !itemStack.isEmpty() && itemStack.getItem() instanceof SpawnEggItem;
+    static FoldMatcher blockTagMatcher(Object tags) {
+        Set<TagKey<Block>> tagSet = blockTags(tags);
+        return facts -> {
+            for (TagKey<Block> tag : tagSet) {
+                if (facts.blockIn(tag)) {
+                    return true;
+                }
+            }
+            return false;
         };
     }
 
-    private static Block blockOf(EmiStack stack) {
-        ItemStack itemStack = stack.getItemStack();
-        if (itemStack.isEmpty() || !(itemStack.getItem() instanceof BlockItem blockItem)) {
-            return null;
-        }
-        return blockItem.getBlock();
+    static FoldMatcher spawnEggMatcher() {
+        return facts -> facts.spawnEgg();
+    }
+
+    static void add(ResourceLocation id, Component component, FoldMatcher matcher) {
+        add(id, component, matcher, FoldDisplayOptions.DEFAULT);
+    }
+
+    static void add(ResourceLocation id, Component component, FoldMatcher matcher, FoldDisplayOptions options) {
+        FoldRegistry.add(id, component, matcher, options);
     }
 
     static void add(ResourceLocation id, Component component, Predicate<EmiStack> matcher) {
@@ -448,6 +447,52 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
             tagSet.add(BlockTags.create(tag));
         }
         return tagSet;
+    }
+
+    private static FoldMatcher allOf(ArrayList<FoldMatcher> matchers) {
+        Set<ResourceLocation> indexedIds = indexedIds(matchers);
+        Set<String> indexedNamespaces = indexedIds.isEmpty() ? indexedNamespaces(matchers) : Set.of();
+        return new FoldMatcher() {
+            @Override
+            public boolean matches(StackFacts facts) {
+                for (FoldMatcher matcher : matchers) {
+                    if (!matcher.matches(facts)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public Set<ResourceLocation> indexedIds() {
+                return indexedIds;
+            }
+
+            @Override
+            public Set<String> indexedNamespaces() {
+                return indexedNamespaces;
+            }
+        };
+    }
+
+    private static Set<ResourceLocation> indexedIds(ArrayList<FoldMatcher> matchers) {
+        for (FoldMatcher matcher : matchers) {
+            Set<ResourceLocation> ids = matcher.indexedIds();
+            if (!ids.isEmpty()) {
+                return ids;
+            }
+        }
+        return Set.of();
+    }
+
+    private static Set<String> indexedNamespaces(ArrayList<FoldMatcher> matchers) {
+        for (FoldMatcher matcher : matchers) {
+            Set<String> namespaces = matcher.indexedNamespaces();
+            if (!namespaces.isEmpty()) {
+                return namespaces;
+            }
+        }
+        return Set.of();
     }
 
     private static ResourceLocation normalizeTagId(String tag) {
@@ -545,11 +590,11 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
 
     @FunctionalInterface
     private interface ContextMatcherFactory {
-        Predicate<EmiStack> create(Context cx, Object value);
+        FoldMatcher create(Context cx, Object value);
     }
 
     @FunctionalInterface
     private interface MatcherFactory {
-        Predicate<EmiStack> create(Object value);
+        FoldMatcher create(Object value);
     }
 }

@@ -132,6 +132,8 @@ BKMEF intentionally does not provide regular-expression filters. Prefer determin
 
 Structured filters are evaluated with cheap checks first and expensive nested or ingredient checks later. Fold definitions are also cached after EMI's index is folded, so normal sidebar rendering does not rescan every entry every frame.
 
+Filters based on `id`, `ids`, `mod`, or `mods`, including structured `all` filters that contain one of them, use an indexed candidate-group path during rebuild. This avoids checking every fold group against every EMI entry in large modpacks. Tag filters are still deterministic and cheap, but they currently use the normal matcher path.
+
 BKMEF writes fold rebuild diagnostics to the log:
 
 - KubeJS fold reload logs the loaded group count and reload time.

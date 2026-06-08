@@ -13,6 +13,7 @@ import dev.latvian.mods.kubejs.recipe.viewer.server.RecipeViewerData;
 import dev.latvian.mods.kubejs.script.ScriptType;
 import io.github.broknowmyorg.bkmef.BkmefClientConfig;
 import io.github.broknowmyorg.bkmef.Broknowmyemifolder;
+import io.github.broknowmyorg.bkmef.emi.FoldMatcher;
 import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.ChatFormatting;
@@ -128,9 +129,9 @@ public final class KubeFoldRegistrar {
         }
     }
 
-    private static Predicate<EmiStack> itemMatcher(Ingredient ingredient) {
-        return stack -> {
-            ItemStack itemStack = stack.getItemStack();
+    private static FoldMatcher itemMatcher(Ingredient ingredient) {
+        return facts -> {
+            ItemStack itemStack = facts.itemStack();
             return !itemStack.isEmpty() && ingredient.test(itemStack);
         };
     }

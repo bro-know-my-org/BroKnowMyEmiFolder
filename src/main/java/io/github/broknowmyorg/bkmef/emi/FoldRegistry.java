@@ -8,6 +8,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -22,9 +24,13 @@ public final class FoldRegistry {
     private static final double SLOW_REBUILD_WARN_MS = 100.0;
 
     private static final List<FoldGroup> GROUPS = new ArrayList<>();
-    private static final Map<ResourceLocation, List<Predicate<EmiStack>>> GROUP_UNFOLDERS = new LinkedHashMap<>();
-    private static final List<Predicate<EmiStack>> GLOBAL_UNFOLDERS = new ArrayList<>();
+    private static final Map<ResourceLocation, List<FoldMatcher>> GROUP_UNFOLDERS = new LinkedHashMap<>();
+    private static final List<FoldMatcher> GLOBAL_UNFOLDERS = new ArrayList<>();
     private static final Set<ResourceLocation> EXPANDED_GROUPS = new HashSet<>();
+    private static final Map<ResourceLocation, List<FoldGroup>> GROUPS_BY_ID = new HashMap<>();
+    private static final Map<String, List<FoldGroup>> GROUPS_BY_NAMESPACE = new HashMap<>();
+    private static final List<FoldGroup> FALLBACK_GROUPS = new ArrayList<>();
+    private static final Map<FoldGroup, Integer> GROUP_ORDER = new IdentityHashMap<>();
     private static int version;
     private static List<? extends EmiIngredient> cachedSource;
     private static FoldLayoutContext.Key cachedLayoutKey;
@@ -38,25 +44,43 @@ public final class FoldRegistry {
         GROUPS.clear();
         GROUP_UNFOLDERS.clear();
         GLOBAL_UNFOLDERS.clear();
+        rebuildGroupIndex();
         version++;
     }
 
     public static void add(ResourceLocation id, Component name, Predicate<EmiStack> matcher) {
-        add(id, name, matcher, FoldDisplayOptions.DEFAULT);
+        add(id, name, FoldMatcher.from(matcher));
     }
 
     public static void add(ResourceLocation id, Component name, Predicate<EmiStack> matcher, FoldDisplayOptions displayOptions) {
+        add(id, name, FoldMatcher.from(matcher), displayOptions);
+    }
+
+    public static void add(ResourceLocation id, Component name, FoldMatcher matcher) {
+        add(id, name, matcher, FoldDisplayOptions.DEFAULT);
+    }
+
+    public static void add(ResourceLocation id, Component name, FoldMatcher matcher, FoldDisplayOptions displayOptions) {
         GROUPS.removeIf(group -> group.id().equals(id));
         GROUPS.add(new FoldGroup(id, name, matcher, unfoldersFor(id), displayOptions));
+        rebuildGroupIndex();
         version++;
     }
 
     public static void unfold(ResourceLocation groupId, Predicate<EmiStack> unfolder) {
+        unfold(groupId, FoldMatcher.from(unfolder));
+    }
+
+    public static void unfold(ResourceLocation groupId, FoldMatcher unfolder) {
         unfoldersFor(groupId).add(unfolder);
         version++;
     }
 
     public static void unfoldAll(Predicate<EmiStack> unfolder) {
+        unfoldAll(FoldMatcher.from(unfolder));
+    }
+
+    public static void unfoldAll(FoldMatcher unfolder) {
         GLOBAL_UNFOLDERS.add(unfolder);
         version++;
     }
@@ -121,7 +145,7 @@ public final class FoldRegistry {
         if (stack == null) {
             return null;
         }
-        for (FoldGroup group : matchingGroups(stack)) {
+        for (FoldGroup group : matchingGroups(new StackFacts(stack))) {
             if (isExpanded(group)) {
                 return group;
             }
@@ -145,7 +169,7 @@ public final class FoldRegistry {
 
         for (EmiIngredient ingredient : source) {
             EmiStack stack = representativeStack(ingredient);
-            List<FoldGroup> groups = stack == null ? List.of() : matchingGroups(stack);
+            List<FoldGroup> groups = stack == null ? List.of() : matchingGroups(new StackFacts(stack));
             if (groups.isEmpty()) {
                 continue;
             }
@@ -207,27 +231,80 @@ public final class FoldRegistry {
         }
     }
 
-    private static List<FoldGroup> matchingGroups(EmiStack stack) {
-        if (unfoldsGlobally(stack)) {
+    private static List<FoldGroup> matchingGroups(StackFacts facts) {
+        if (unfoldsGlobally(facts)) {
             return List.of();
         }
 
         List<FoldGroup> groups = new ArrayList<>();
-        for (FoldGroup group : GROUPS) {
-            if (group.matches(stack) && !group.unfolds(stack)) {
+        for (FoldGroup group : candidateGroups(facts)) {
+            if (group.matches(facts) && !group.unfolds(facts)) {
                 groups.add(group);
             }
         }
         return List.copyOf(groups);
     }
 
-    private static List<Predicate<EmiStack>> unfoldersFor(ResourceLocation groupId) {
+    private static List<FoldGroup> candidateGroups(StackFacts facts) {
+        ResourceLocation id = facts.id();
+        List<FoldGroup> byId = id == null ? List.of() : GROUPS_BY_ID.getOrDefault(id, List.of());
+        List<FoldGroup> byNamespace = id == null ? List.of() : GROUPS_BY_NAMESPACE.getOrDefault(facts.namespace(), List.of());
+        if (byId.isEmpty() && byNamespace.isEmpty()) {
+            return FALLBACK_GROUPS;
+        }
+        if (FALLBACK_GROUPS.isEmpty()) {
+            if (byNamespace.isEmpty()) {
+                return byId;
+            }
+            if (byId.isEmpty()) {
+                return byNamespace;
+            }
+        }
+
+        List<FoldGroup> candidates = new ArrayList<>(FALLBACK_GROUPS.size() + byId.size() + byNamespace.size());
+        candidates.addAll(FALLBACK_GROUPS);
+        candidates.addAll(byId);
+        candidates.addAll(byNamespace);
+        candidates.sort(Comparator.comparingInt(group -> GROUP_ORDER.getOrDefault(group, Integer.MAX_VALUE)));
+        return candidates;
+    }
+
+    private static void rebuildGroupIndex() {
+        GROUPS_BY_ID.clear();
+        GROUPS_BY_NAMESPACE.clear();
+        FALLBACK_GROUPS.clear();
+        GROUP_ORDER.clear();
+
+        for (int i = 0; i < GROUPS.size(); i++) {
+            FoldGroup group = GROUPS.get(i);
+            GROUP_ORDER.put(group, i);
+            Set<ResourceLocation> ids = group.matcher().indexedIds();
+            if (!ids.isEmpty()) {
+                for (ResourceLocation id : ids) {
+                    GROUPS_BY_ID.computeIfAbsent(id, ignored -> new ArrayList<>()).add(group);
+                }
+                continue;
+            }
+
+            Set<String> namespaces = group.matcher().indexedNamespaces();
+            if (!namespaces.isEmpty()) {
+                for (String namespace : namespaces) {
+                    GROUPS_BY_NAMESPACE.computeIfAbsent(namespace, ignored -> new ArrayList<>()).add(group);
+                }
+                continue;
+            }
+
+            FALLBACK_GROUPS.add(group);
+        }
+    }
+
+    private static List<FoldMatcher> unfoldersFor(ResourceLocation groupId) {
         return GROUP_UNFOLDERS.computeIfAbsent(groupId, ignored -> new ArrayList<>());
     }
 
-    private static boolean unfoldsGlobally(EmiStack stack) {
-        for (Predicate<EmiStack> unfolder : GLOBAL_UNFOLDERS) {
-            if (unfolder.test(stack)) {
+    private static boolean unfoldsGlobally(StackFacts facts) {
+        for (FoldMatcher unfolder : GLOBAL_UNFOLDERS) {
+            if (unfolder.matches(facts)) {
                 return true;
             }
         }

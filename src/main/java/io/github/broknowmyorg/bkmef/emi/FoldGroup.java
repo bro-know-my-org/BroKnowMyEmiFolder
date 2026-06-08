@@ -5,22 +5,29 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
-import java.util.function.Predicate;
 
 public record FoldGroup(
     ResourceLocation id,
     Component name,
-    Predicate<EmiStack> matcher,
-    List<Predicate<EmiStack>> unfolders,
+    FoldMatcher matcher,
+    List<FoldMatcher> unfolders,
     FoldDisplayOptions displayOptions
 ) {
     public boolean matches(EmiStack stack) {
-        return matcher.test(stack);
+        return matches(new StackFacts(stack));
+    }
+
+    public boolean matches(StackFacts facts) {
+        return matcher.matches(facts);
     }
 
     public boolean unfolds(EmiStack stack) {
-        for (Predicate<EmiStack> unfolder : unfolders) {
-            if (unfolder.test(stack)) {
+        return unfolds(new StackFacts(stack));
+    }
+
+    public boolean unfolds(StackFacts facts) {
+        for (FoldMatcher unfolder : unfolders) {
+            if (unfolder.matches(facts)) {
                 return true;
             }
         }
