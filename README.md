@@ -95,6 +95,13 @@ Options:
 
 See [KubeJS API](docs/kubejs-api.md) for the supported script methods and options.
 
+## In-game Settings
+
+Open EMI's settings from the bottom-left EMI button. The `BKMEF` group adds:
+
+- `Enable EMI index folding`: disables or enables the folded index entries without removing KubeJS scripts.
+- `Show fold reload messages`: disables or enables the BKMEF chat message shown after fold groups are loaded or reloaded.
+
 ## 中文
 
 [English](#bro-know-my-emi-folder) | [中文](#中文)
@@ -191,3 +198,10 @@ event.fold('my_pack:wooden_block_items', '木质方块物品', {
 `spread` 控制预览卡片之间的横向像素偏移。`color` 支持数字、`'#RRGGBB'`、`'rainbow'` 或 `'random'`。
 
 支持的脚本方法和参数见 [KubeJS API](docs/kubejs-api.md)。
+
+## 游戏内设置
+
+从左下角 EMI 按钮打开 EMI 设置。`BKMEF` 分组里有：
+
+- `启用 EMI 索引折叠`：关闭或开启折叠索引，不需要删除 KubeJS 脚本。
+- `显示折叠重载播报`：关闭或开启折叠分组加载/重载后的聊天栏提示。

@@ -11,8 +11,11 @@ import dev.latvian.mods.kubejs.recipe.viewer.server.FluidData;
 import dev.latvian.mods.kubejs.recipe.viewer.server.ItemData;
 import dev.latvian.mods.kubejs.recipe.viewer.server.RecipeViewerData;
 import dev.latvian.mods.kubejs.script.ScriptType;
+import io.github.broknowmyorg.bkmef.BkmefClientConfig;
 import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
 import net.minecraft.client.Minecraft;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.material.Fluid;
@@ -22,20 +25,51 @@ import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import java.util.function.Predicate;
 
 public final class KubeFoldRegistrar {
+    private static boolean loaded;
+
     private KubeFoldRegistrar() {
     }
 
     public static void rebuildFromKube() {
+        rebuildFromKube(false);
+    }
+
+    private static void rebuildFromKube(boolean notify) {
         FoldRegistry.reloadStaticGroups();
         postFoldEvents();
         postGroupEntriesEvents();
         addRemoteData(currentRemoteData());
+        if (notify) {
+            notifyStatus();
+        }
     }
 
     public static void rebuildFromKubeAndRefresh() {
-        rebuildFromKube();
+        rebuildFromKube(true);
         EmiScreenManager.repopulatePanels(SidebarType.INDEX);
         EmiSearch.update();
+    }
+
+    private static void notifyStatus() {
+        if (!BkmefClientConfig.isReloadMessagesEnabled()) {
+            loaded = true;
+            return;
+        }
+
+        boolean reloaded = loaded;
+        loaded = true;
+
+        Minecraft minecraft = Minecraft.getInstance();
+        minecraft.execute(() -> {
+            if (minecraft.gui == null) {
+                return;
+            }
+
+            String key = reloaded
+                ? "message.broknowmyemifolder.fold_reloaded"
+                : "message.broknowmyemifolder.fold_loaded";
+            minecraft.gui.getChat().addMessage(Component.translatable(key, FoldRegistry.groupCount()).withStyle(ChatFormatting.GREEN));
+        });
     }
 
     private static void postFoldEvents() {

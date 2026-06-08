@@ -6,6 +6,7 @@
   "mixins": [
   ],
   "client": [
+    "ConfigScreenMixin",
     "EmiScreenManagerMixin",
     "EmiScreenSpaceMixin",
     "EmiSearchWorkerMixin",

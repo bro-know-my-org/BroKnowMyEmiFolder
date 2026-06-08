@@ -6,6 +6,7 @@ import dev.emi.emi.input.EmiInput;
 import dev.emi.emi.api.stack.EmiStackInteraction;
 import dev.emi.emi.screen.EmiScreenManager;
 import dev.emi.emi.search.EmiSearch;
+import io.github.broknowmyorg.bkmef.BkmefClientConfig;
 import io.github.broknowmyorg.bkmef.emi.ExpandedFoldEmiIngredient;
 import io.github.broknowmyorg.bkmef.emi.FoldGroup;
 import io.github.broknowmyorg.bkmef.emi.FoldPlaceholderEmiIngredient;
@@ -21,6 +22,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class EmiScreenManagerMixin {
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, remap = false)
     private static void bkmef$toggleFold(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (!BkmefClientConfig.isFoldingEnabled()) {
+            return;
+        }
         if (button != 0) {
             return;
         }

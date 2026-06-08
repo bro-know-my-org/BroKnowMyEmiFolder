@@ -2,6 +2,7 @@ package io.github.broknowmyorg.bkmef.emi;
 
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
+import io.github.broknowmyorg.bkmef.BkmefClientConfig;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -56,8 +57,12 @@ public final class FoldRegistry {
         version++;
     }
 
+    public static int groupCount() {
+        return GROUPS.size();
+    }
+
     public static List<? extends EmiIngredient> foldIndex(List<? extends EmiIngredient> source) {
-        if (GROUPS.isEmpty() || source.isEmpty()) {
+        if (!BkmefClientConfig.isFoldingEnabled() || GROUPS.isEmpty() || source.isEmpty()) {
             return source;
         }
 
