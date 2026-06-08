@@ -13,14 +13,14 @@ public interface FoldKubeEvent extends KubeEvent {
     @Info(value = "Defines an item fold group with an automatic id generated from the name.",
         params = {
             @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:."),
-            @Param(name = "filter", value = "KubeJS item ingredient, item id, tag, or ingredient array.")
+            @Param(name = "filter", value = "KubeJS item ingredient, item id, item tag, ingredient array, predicate, or structured filter object.")
         })
     void fold(Context cx, Object name, Object filter);
 
     @Info(value = "Defines an item fold group with optional display settings.",
         params = {
             @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:."),
-            @Param(name = "filter", value = "KubeJS item ingredient, item id, tag, or ingredient array."),
+            @Param(name = "filter", value = "KubeJS item ingredient, item id, item tag, ingredient array, predicate, or structured filter object."),
             @Param(name = "options", value = "Optional settings. Supports { spread?: number, color?: number | string, id?: string }.")
         })
     void fold(Context cx, Object name, Object filter, Object options);
@@ -29,7 +29,7 @@ public interface FoldKubeEvent extends KubeEvent {
         params = {
             @Param(name = "id", value = "Stable group id, for example 'modid:ores'."),
             @Param(name = "name", value = "Literal text, Component, or a string prefixed with translate:."),
-            @Param(name = "filter", value = "KubeJS item ingredient, item id, tag, or ingredient array."),
+            @Param(name = "filter", value = "KubeJS item ingredient, item id, item tag, ingredient array, predicate, or structured filter object."),
             @Param(name = "options", value = "Optional settings. Supports { spread?: number, color?: number | string }.")
         })
     void fold(Context cx, Object id, Object name, Object filter, Object options);
@@ -130,7 +130,7 @@ public interface FoldKubeEvent extends KubeEvent {
     @Info(value = "Prevents matching item entries from being folded by the specified fold group.",
         params = {
             @Param(name = "groupId", value = "Stable fold group id, for example 'modid:tools'."),
-            @Param(name = "filter", value = "KubeJS item ingredient, item id, tag, or ingredient array.")
+            @Param(name = "filter", value = "KubeJS item ingredient, item id, item tag, ingredient array, predicate, or structured filter object.")
         })
     void unfold(Context cx, Object groupId, Object filter);
 
@@ -150,7 +150,7 @@ public interface FoldKubeEvent extends KubeEvent {
 
     @Info(value = "Prevents matching item entries from being folded by any fold group.",
         params = {
-            @Param(name = "filter", value = "KubeJS item ingredient, item id, tag, or ingredient array.")
+            @Param(name = "filter", value = "KubeJS item ingredient, item id, item tag, ingredient array, predicate, or structured filter object.")
         })
     void unfoldAll(Context cx, Object filter);
 

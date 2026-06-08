@@ -11,13 +11,19 @@ import io.github.broknowmyorg.bkmef.Broknowmyemifolder;
 import io.github.broknowmyorg.bkmef.emi.FoldDisplayOptions;
 import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
@@ -159,6 +165,11 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
     }
 
     static Predicate<EmiStack> itemMatcher(Context cx, Object filter) {
+        Predicate<EmiStack> structured = structuredItemMatcher(cx, filter);
+        if (structured != null) {
+            return structured;
+        }
+
         ItemPredicate ingredient = (ItemPredicate) RecipeViewerEntryType.ITEM.wrapPredicate(cx, filter);
         ItemStack[] entries = ingredient.kjs$getStackArray();
         return stack -> {
@@ -173,6 +184,119 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
             }
             return ingredient.test(itemStack);
         };
+    }
+
+    private static Predicate<EmiStack> structuredItemMatcher(Context cx, Object filter) {
+        Object options = Wrapper.unwrapped(filter);
+        if (!isStructuredItemFilter(cx, options)) {
+            return null;
+        }
+
+        ArrayList<Predicate<EmiStack>> matchers = new ArrayList<>();
+        addFilterMatcher(cx, options, matchers, "all", ClientFoldKubeEvent::allMatcher);
+        addFilterMatcher(cx, options, matchers, "any", ClientFoldKubeEvent::anyMatcher);
+        addNegatedFilterMatcher(cx, options, matchers, "none");
+        addNegatedFilterMatcher(cx, options, matchers, "not");
+        addFilterMatcher(cx, options, matchers, "item", ClientFoldKubeEvent::itemMatcher);
+        addFilterMatcher(cx, options, matchers, "ingredient", ClientFoldKubeEvent::itemMatcher);
+        addFilterMatcher(cx, options, matchers, "id", ClientFoldKubeEvent::idMatcher);
+        addFilterMatcher(cx, options, matchers, "ids", ClientFoldKubeEvent::idMatcher);
+        addFilterMatcher(cx, options, matchers, "mod", ClientFoldKubeEvent::modMatcher);
+        addFilterMatcher(cx, options, matchers, "mods", ClientFoldKubeEvent::modMatcher);
+        addFilterMatcher(cx, options, matchers, "tag", ClientFoldKubeEvent::itemTagMatcher);
+        addFilterMatcher(cx, options, matchers, "tags", ClientFoldKubeEvent::itemTagMatcher);
+        addFilterMatcher(cx, options, matchers, "block", ClientFoldKubeEvent::blockMatcher);
+        addFilterMatcher(cx, options, matchers, "blocks", ClientFoldKubeEvent::blockMatcher);
+        addFilterMatcher(cx, options, matchers, "blockTag", ClientFoldKubeEvent::blockTagMatcher);
+        addFilterMatcher(cx, options, matchers, "blockTags", ClientFoldKubeEvent::blockTagMatcher);
+
+        if (hasOption(cx, options, "spawnEggs")) {
+            Object spawnEggs = getOption(cx, options, "spawnEggs");
+            Predicate<EmiStack> matcher = spawnEggMatcher();
+            matchers.add(Boolean.FALSE.equals(spawnEggs) ? matcher.negate() : matcher);
+        }
+
+        return stack -> {
+            for (Predicate<EmiStack> matcher : matchers) {
+                if (!matcher.test(stack)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+    }
+
+    private static boolean isStructuredItemFilter(Context cx, Object options) {
+        if (options == null) {
+            return false;
+        }
+        return hasOption(cx, options, "all")
+            || hasOption(cx, options, "any")
+            || hasOption(cx, options, "none")
+            || hasOption(cx, options, "not")
+            || hasOption(cx, options, "item")
+            || hasOption(cx, options, "ingredient")
+            || hasOption(cx, options, "id")
+            || hasOption(cx, options, "ids")
+            || hasOption(cx, options, "mod")
+            || hasOption(cx, options, "mods")
+            || hasOption(cx, options, "tag")
+            || hasOption(cx, options, "tags")
+            || hasOption(cx, options, "block")
+            || hasOption(cx, options, "blocks")
+            || hasOption(cx, options, "blockTag")
+            || hasOption(cx, options, "blockTags")
+            || hasOption(cx, options, "spawnEggs");
+    }
+
+    private static void addFilterMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers, String key, ContextMatcherFactory factory) {
+        if (hasOption(cx, options, key)) {
+            matchers.add(factory.create(cx, getOption(cx, options, key)));
+        }
+    }
+
+    private static void addFilterMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers, String key, MatcherFactory factory) {
+        if (hasOption(cx, options, key)) {
+            matchers.add(factory.create(getOption(cx, options, key)));
+        }
+    }
+
+    private static void addNegatedFilterMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers, String key) {
+        if (hasOption(cx, options, key)) {
+            matchers.add(anyMatcher(cx, getOption(cx, options, key)).negate());
+        }
+    }
+
+    private static Predicate<EmiStack> allMatcher(Context cx, Object filters) {
+        ArrayList<Predicate<EmiStack>> matchers = itemMatchers(cx, filters);
+        return stack -> {
+            for (Predicate<EmiStack> matcher : matchers) {
+                if (!matcher.test(stack)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+    }
+
+    private static Predicate<EmiStack> anyMatcher(Context cx, Object filters) {
+        ArrayList<Predicate<EmiStack>> matchers = itemMatchers(cx, filters);
+        return stack -> {
+            for (Predicate<EmiStack> matcher : matchers) {
+                if (matcher.test(stack)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+    }
+
+    private static ArrayList<Predicate<EmiStack>> itemMatchers(Context cx, Object filters) {
+        ArrayList<Predicate<EmiStack>> matchers = new ArrayList<>();
+        for (Object filter : ListJS.orSelf(filters)) {
+            matchers.add(itemMatcher(cx, filter));
+        }
+        return matchers;
     }
 
     static Predicate<EmiStack> fluidMatcher(Context cx, Object filter) {
@@ -192,6 +316,22 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         return stack -> stack.getId() != null && idSet.contains(stack.getId());
     }
 
+    static Predicate<EmiStack> itemTagMatcher(Object tags) {
+        Set<ResourceLocation> tagSet = tagIds(tags);
+        return stack -> {
+            ItemStack itemStack = stack.getItemStack();
+            if (itemStack.isEmpty()) {
+                return false;
+            }
+            for (ResourceLocation tag : tagSet) {
+                if (itemStack.is(ItemTags.create(tag))) {
+                    return true;
+                }
+            }
+            return false;
+        };
+    }
+
     static Predicate<EmiStack> modMatcher(Object mods) {
         Set<String> namespaces = new HashSet<>();
         for (Object mod : ListJS.orSelf(mods)) {
@@ -201,11 +341,47 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         return stack -> stack.getId() != null && namespaces.contains(stack.getId().getNamespace().toLowerCase(Locale.ROOT));
     }
 
+    static Predicate<EmiStack> blockMatcher(Object blocks) {
+        Set<ResourceLocation> blockSet = new HashSet<>();
+        for (Object block : ListJS.orSelf(blocks)) {
+            blockSet.add(ResourceLocation.parse(String.valueOf(block)));
+        }
+
+        return stack -> {
+            Block block = blockOf(stack);
+            return block != null && blockSet.contains(BuiltInRegistries.BLOCK.getKey(block));
+        };
+    }
+
+    static Predicate<EmiStack> blockTagMatcher(Object tags) {
+        Set<ResourceLocation> tagSet = tagIds(tags);
+        return stack -> {
+            Block block = blockOf(stack);
+            if (block == null) {
+                return false;
+            }
+            for (ResourceLocation tag : tagSet) {
+                if (block.builtInRegistryHolder().is(BlockTags.create(tag))) {
+                    return true;
+                }
+            }
+            return false;
+        };
+    }
+
     static Predicate<EmiStack> spawnEggMatcher() {
         return stack -> {
             ItemStack itemStack = stack.getItemStack();
             return !itemStack.isEmpty() && itemStack.getItem() instanceof SpawnEggItem;
         };
+    }
+
+    private static Block blockOf(EmiStack stack) {
+        ItemStack itemStack = stack.getItemStack();
+        if (itemStack.isEmpty() || !(itemStack.getItem() instanceof BlockItem blockItem)) {
+            return null;
+        }
+        return blockItem.getBlock();
     }
 
     static void add(ResourceLocation id, Component component, Predicate<EmiStack> matcher) {
@@ -241,6 +417,22 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
             string = string.substring(1);
         }
         return string.toLowerCase(Locale.ROOT);
+    }
+
+    private static Set<ResourceLocation> tagIds(Object tags) {
+        Set<ResourceLocation> tagSet = new HashSet<>();
+        for (Object tag : ListJS.orSelf(tags)) {
+            tagSet.add(normalizeTagId(String.valueOf(tag)));
+        }
+        return tagSet;
+    }
+
+    private static ResourceLocation normalizeTagId(String tag) {
+        String string = tag.trim();
+        if (string.startsWith("#")) {
+            string = string.substring(1);
+        }
+        return ResourceLocation.parse(string);
     }
 
     private FoldDisplayOptions toOptions(Context cx, Object options, ResourceLocation id) {
@@ -285,6 +477,19 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         return null;
     }
 
+    private static boolean hasOption(Context cx, Object options, String key) {
+        if (options == null) {
+            return false;
+        }
+        if (options instanceof Map<?, ?> map) {
+            return map.containsKey(key);
+        }
+        if (options instanceof Scriptable scriptable && cx != null) {
+            return scriptable.get(cx, key, scriptable) != Scriptable.NOT_FOUND;
+        }
+        return false;
+    }
+
     private int toColor(Object value, ResourceLocation id) {
         Object unwrapped = Wrapper.unwrapped(value);
         if (unwrapped instanceof Number number) {
@@ -313,5 +518,15 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         String path = name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]+", "_");
         path = path.replaceAll("^_+|_+$", "");
         return path.isEmpty() ? "fold" : path;
+    }
+
+    @FunctionalInterface
+    private interface ContextMatcherFactory {
+        Predicate<EmiStack> create(Context cx, Object value);
+    }
+
+    @FunctionalInterface
+    private interface MatcherFactory {
+        Predicate<EmiStack> create(Object value);
     }
 }
