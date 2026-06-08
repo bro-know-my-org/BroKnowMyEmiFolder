@@ -54,6 +54,58 @@ event.unfoldAllId(ids)
 
 `filter` for `fold` uses KubeJS item ingredient syntax, such as an item id, tag, or ingredient array.
 
+`#tag` item ingredient syntax matches item tags. It does not automatically match the block tags of block items. Use the structured `blockTag` filter when you want to match the block represented by a `BlockItem`.
+
+`filter` may also be a structured object. Keys in the same object are combined with AND:
+
+```js
+event.fold('my_pack:create_wooden_blocks', 'Create Wooden Blocks', {
+  mod: 'create',
+  blockTag: '#minecraft:mineable/axe'
+})
+```
+
+Supported structured item filter keys:
+
+```js
+{
+  all: ['#c:tools', { mod: 'create' }],     // every nested filter must match
+  any: ['#c:ores', '#c:raw_materials'],     // at least one nested filter must match
+  none: ['#c:tools/axes'],                  // no nested filter may match
+  not: '#minecraft:arrows',                 // shorthand for none
+  item: '#c:tools',                         // KubeJS item ingredient
+  ingredient: 'minecraft:shears',           // alias of item
+  id: 'minecraft:potion',                   // exact EMI stack id
+  ids: ['minecraft:potion'],
+  mod: 'create',                            // EMI stack id namespace
+  mods: ['create', '@citadel'],
+  tag: '#c:tools',                          // item tag
+  tags: ['#c:tools', '#minecraft:arrows'],
+  block: 'minecraft:oak_log',               // represented block id for BlockItem
+  blocks: ['minecraft:oak_log'],
+  blockTag: '#minecraft:logs',              // represented block tag for BlockItem
+  blockTags: ['#minecraft:logs'],
+  spawnEggs: true
+}
+```
+
+Examples:
+
+```js
+event.fold('my_pack:tools_without_axes', 'Tools Without Axes', {
+  tag: '#c:tools',
+  none: '#c:tools/axes'
+})
+
+event.fold('my_pack:tag_intersection', 'Tag Intersection', {
+  all: ['#c:tools', '#minecraft:breaks_decorated_pots']
+})
+
+event.fold('my_pack:wooden_block_items', 'Wooden Block Items', {
+  blockTag: '#minecraft:logs'
+})
+```
+
 `filter` for `foldFluid` uses KubeJS fluid ingredient syntax.
 
 `ids` for `foldId` is a single id or an array of ids matched against `EmiStack#getId()`.

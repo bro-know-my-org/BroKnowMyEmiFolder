@@ -68,6 +68,20 @@ event.unfoldAllId(ids)
 
 `foldSpawnEggs` folds items implemented as Minecraft `SpawnEggItem`, independent of item id naming.
 
+For combined filters, pass a structured object. Plain `#tag` matches item tags; use `blockTag` for the block tags of block items.
+
+```js
+event.fold('my_pack:tools_without_axes', 'Tools Without Axes', {
+  tag: '#c:tools',
+  none: '#c:tools/axes'
+})
+
+event.fold('my_pack:wooden_block_items', 'Wooden Block Items', {
+  mod: 'minecraft',
+  blockTag: '#minecraft:logs'
+})
+```
+
 Options:
 
 ```js
@@ -150,6 +164,20 @@ event.unfoldAllId(ids)
 `foldMod` 会按 EMI stack id 的命名空间折叠条目。它接受带或不带 `@` 前缀的 mod id，例如 `'@citadel'`。
 
 `foldSpawnEggs` 会折叠底层实现为 Minecraft `SpawnEggItem` 的物品，不依赖物品 id 是否以 `_spawn_egg` 结尾。
+
+复杂过滤可以传结构化对象。普通 `#tag` 匹配的是物品 tag；如果要按方块物品对应方块的方块 tag 过滤，用 `blockTag`。
+
+```js
+event.fold('my_pack:tools_without_axes', '非斧工具', {
+  tag: '#c:tools',
+  none: '#c:tools/axes'
+})
+
+event.fold('my_pack:wooden_block_items', '木质方块物品', {
+  mod: 'minecraft',
+  blockTag: '#minecraft:logs'
+})
+```
 
 可选参数：
 
