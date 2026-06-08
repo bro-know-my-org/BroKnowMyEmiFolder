@@ -14,7 +14,7 @@ import java.nio.file.Path;
 
 public final class BkmefClientConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("broknowmyemifolder-client.json");
+    private static final String CONFIG_FILE = "broknowmyemifolder-client.json";
 
     private static boolean foldingEnabled = true;
     private static boolean reloadMessagesEnabled = true;
@@ -23,12 +23,13 @@ public final class BkmefClientConfig {
     }
 
     public static void load() {
-        if (!Files.isRegularFile(CONFIG_PATH)) {
+        Path configPath = configPath();
+        if (!Files.isRegularFile(configPath)) {
             save();
             return;
         }
 
-        try (Reader reader = Files.newBufferedReader(CONFIG_PATH, StandardCharsets.UTF_8)) {
+        try (Reader reader = Files.newBufferedReader(configPath, StandardCharsets.UTF_8)) {
             JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
             foldingEnabled = getBoolean(json, "foldingEnabled", foldingEnabled);
             reloadMessagesEnabled = getBoolean(json, "reloadMessagesEnabled", reloadMessagesEnabled);
@@ -39,11 +40,12 @@ public final class BkmefClientConfig {
 
     public static void save() {
         try {
-            Files.createDirectories(CONFIG_PATH.getParent());
+            Path configPath = configPath();
+            Files.createDirectories(configPath.getParent());
             JsonObject json = new JsonObject();
             json.addProperty("foldingEnabled", foldingEnabled);
             json.addProperty("reloadMessagesEnabled", reloadMessagesEnabled);
-            try (Writer writer = Files.newBufferedWriter(CONFIG_PATH, StandardCharsets.UTF_8)) {
+            try (Writer writer = Files.newBufferedWriter(configPath, StandardCharsets.UTF_8)) {
                 GSON.toJson(json, writer);
             }
         } catch (Exception exception) {
@@ -71,5 +73,10 @@ public final class BkmefClientConfig {
 
     private static boolean getBoolean(JsonObject json, String key, boolean fallback) {
         return json.has(key) && json.get(key).isJsonPrimitive() ? json.get(key).getAsBoolean() : fallback;
+    }
+
+    private static Path configPath() {
+        Path configDir = FMLPaths.CONFIGDIR.get();
+        return (configDir == null ? Path.of("config") : configDir).resolve(CONFIG_FILE);
     }
 }

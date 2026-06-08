@@ -3,6 +3,7 @@ package io.github.broknowmyorg.bkmef.emi;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import io.github.broknowmyorg.bkmef.BkmefClientConfig;
+import io.github.broknowmyorg.bkmef.Broknowmyemifolder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -17,6 +18,9 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 public final class FoldRegistry {
+    private static final int LARGE_GROUP_MATCH_THRESHOLD = 512;
+    private static final double SLOW_REBUILD_WARN_MS = 100.0;
+
     private static final List<FoldGroup> GROUPS = new ArrayList<>();
     private static final Map<ResourceLocation, List<Predicate<EmiStack>>> GROUP_UNFOLDERS = new LinkedHashMap<>();
     private static final List<Predicate<EmiStack>> GLOBAL_UNFOLDERS = new ArrayList<>();
@@ -71,8 +75,28 @@ public final class FoldRegistry {
             return cachedFolded;
         }
 
+        long start = System.nanoTime();
         FoldMembership foldMembership = collectMembership(source);
         List<EmiIngredient> folded = buildFoldedIndex(source, foldMembership);
+        double elapsedMs = (System.nanoTime() - start) / 1_000_000.0;
+
+        Broknowmyemifolder.LOGGER.debug(
+            "Rebuilt folded EMI index: source={}, folded={}, groups={}, matchedEntries={}, memberships={}, time={}ms",
+            source.size(),
+            folded.size(),
+            GROUPS.size(),
+            foldMembership.matchedEntryCount(),
+            foldMembership.membershipCount(),
+            String.format("%.2f", elapsedMs)
+        );
+        if (elapsedMs >= SLOW_REBUILD_WARN_MS) {
+            Broknowmyemifolder.LOGGER.warn(
+                "BKMEF folded EMI index rebuild took {}ms for {} source entries and {} groups",
+                String.format("%.2f", elapsedMs),
+                source.size(),
+                GROUPS.size()
+            );
+        }
 
         cachedSource = source;
         cachedLayoutKey = layoutKey;
@@ -117,6 +141,7 @@ public final class FoldRegistry {
     private static FoldMembership collectMembership(List<? extends EmiIngredient> source) {
         Map<FoldGroup, List<EmiIngredient>> matchedGroups = new LinkedHashMap<>();
         Map<EmiIngredient, List<FoldGroup>> membership = new IdentityHashMap<>();
+        int membershipCount = 0;
 
         for (EmiIngredient ingredient : source) {
             EmiStack stack = representativeStack(ingredient);
@@ -126,12 +151,15 @@ public final class FoldRegistry {
             }
 
             membership.put(ingredient, groups);
+            membershipCount += groups.size();
             for (FoldGroup group : groups) {
                 matchedGroups.computeIfAbsent(group, ignored -> new ArrayList<>()).add(ingredient);
             }
         }
 
-        return new FoldMembership(matchedGroups, membership);
+        logLargeGroups(matchedGroups);
+
+        return new FoldMembership(matchedGroups, membership, membershipCount);
     }
 
     private static List<EmiIngredient> buildFoldedIndex(List<? extends EmiIngredient> source, FoldMembership foldMembership) {
@@ -206,14 +234,36 @@ public final class FoldRegistry {
         return false;
     }
 
+    private static void logLargeGroups(Map<FoldGroup, List<EmiIngredient>> matchedGroups) {
+        if (!Broknowmyemifolder.LOGGER.isDebugEnabled()) {
+            return;
+        }
+
+        for (Map.Entry<FoldGroup, List<EmiIngredient>> entry : matchedGroups.entrySet()) {
+            int size = entry.getValue().size();
+            if (size >= LARGE_GROUP_MATCH_THRESHOLD) {
+                Broknowmyemifolder.LOGGER.debug(
+                    "BKMEF fold group {} matched {} entries",
+                    entry.getKey().id(),
+                    size
+                );
+            }
+        }
+    }
+
     private record FoldMembership(Map<FoldGroup, List<EmiIngredient>> matchedGroups,
-                                  Map<EmiIngredient, List<FoldGroup>> membership) {
+                                  Map<EmiIngredient, List<FoldGroup>> membership,
+                                  int membershipCount) {
         private List<FoldGroup> groupsFor(EmiIngredient ingredient) {
             return membership.get(ingredient);
         }
 
         private List<EmiIngredient> ingredientsFor(FoldGroup group) {
             return matchedGroups.getOrDefault(group, List.of());
+        }
+
+        private int matchedEntryCount() {
+            return membership.size();
         }
     }
 }

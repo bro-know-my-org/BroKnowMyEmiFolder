@@ -126,6 +126,19 @@ event.fold('my_pack:wooden_block_items', 'Wooden Block Items', {
 
 `foldId` and `unfoldId` match `EmiStack#getId()`, not item stack components. For item variants with the same id but different data components, such as filled seed pouches, this matches every variant with that item id.
 
+## Performance Notes
+
+BKMEF intentionally does not provide regular-expression filters. Prefer deterministic filters such as `id`, `ids`, `mod`, `mods`, `tag`, `block`, and `blockTag`; they are cheaper, easier to read, and harder to accidentally make pathological.
+
+Structured filters are evaluated with cheap checks first and expensive nested or ingredient checks later. Fold definitions are also cached after EMI's index is folded, so normal sidebar rendering does not rescan every entry every frame.
+
+BKMEF writes fold rebuild diagnostics to the log:
+
+- KubeJS fold reload logs the loaded group count and reload time.
+- More than 100 fold groups logs a warning because broad or deeply nested filters can slow index rebuilds.
+- EMI index fold rebuilds log source entry count, folded entry count, matched entry count, membership count, and elapsed time at debug level.
+- Slow index fold rebuilds log a warning.
+
 ## Options
 
 `options` is optional.

@@ -12,6 +12,7 @@ import dev.latvian.mods.kubejs.recipe.viewer.server.ItemData;
 import dev.latvian.mods.kubejs.recipe.viewer.server.RecipeViewerData;
 import dev.latvian.mods.kubejs.script.ScriptType;
 import io.github.broknowmyorg.bkmef.BkmefClientConfig;
+import io.github.broknowmyorg.bkmef.Broknowmyemifolder;
 import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.ChatFormatting;
@@ -22,9 +23,13 @@ import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 public final class KubeFoldRegistrar {
+    private static final int LARGE_GROUP_COUNT_WARN_THRESHOLD = 100;
+
     private static boolean loaded;
 
     private KubeFoldRegistrar() {
@@ -35,10 +40,20 @@ public final class KubeFoldRegistrar {
     }
 
     private static void rebuildFromKube(boolean notify) {
+        long start = System.nanoTime();
         FoldRegistry.reloadStaticGroups();
         postFoldEvents();
         postGroupEntriesEvents();
         addRemoteData(currentRemoteData());
+        double elapsedMs = (System.nanoTime() - start) / 1_000_000.0;
+        int groupCount = FoldRegistry.groupCount();
+        Broknowmyemifolder.LOGGER.info("BKMEF loaded {} fold groups in {}ms", groupCount, String.format("%.2f", elapsedMs));
+        if (groupCount > LARGE_GROUP_COUNT_WARN_THRESHOLD) {
+            Broknowmyemifolder.LOGGER.warn(
+                "BKMEF has {} fold groups; broad or deeply nested filters may slow EMI index rebuilds",
+                groupCount
+            );
+        }
         if (notify) {
             notifyStatus();
         }
@@ -121,9 +136,10 @@ public final class KubeFoldRegistrar {
     }
 
     private static Predicate<EmiStack> fluidMatcher(FluidIngredient ingredient) {
+        Map<Fluid, Boolean> cache = new ConcurrentHashMap<>();
         return stack -> {
             Fluid fluid = stack.getKeyOfType(Fluid.class);
-            return fluid != null && ingredient.test(new FluidStack(fluid, 1000));
+            return fluid != null && cache.computeIfAbsent(fluid, key -> ingredient.test(new FluidStack(key, 1000)));
         };
     }
 }

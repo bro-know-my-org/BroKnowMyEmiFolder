@@ -82,6 +82,24 @@ dependencies {
 
     compileOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
     runtimeOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+
+    testCompileOnly "dev.emi:emi-neoforge:${emi_version}+${minecraft_version}"
+    testCompileOnly "dev.emi:emi-neoforge:${emi_version}+${minecraft_version}:api"
+    testRuntimeOnly "dev.emi:emi-neoforge:${emi_version}+${minecraft_version}"
+    testCompileOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+    testRuntimeOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+}
+
+tasks.register("foldPerformanceProbe", JavaExec) {
+    group = "verification"
+    description = "Runs a synthetic BKMEF fold index performance probe."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "io.github.broknowmyorg.bkmef.kubejs.FoldPerformanceProbe"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    jvmArgs "-Xms512m", "-Xmx2G"
+    systemProperties System.getProperties().findAll { key, ignored -> key.toString().startsWith("bkmef.probe.") }
 }
 
 def generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
@@ -108,6 +126,8 @@ def generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 }
 
 sourceSets.main.resources.srcDir generateModMetadata
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
 neoForge.ideSyncTask generateModMetadata
 
 idea {

@@ -15,7 +15,7 @@ public class FoldPlaceholderEmiIngredient implements FoldSlotEmiIngredient {
 
     public FoldPlaceholderEmiIngredient(FoldGroup group, List<EmiStack> stacks, int slotIndex) {
         this.group = group;
-        this.stacks = List.copyOf(stacks);
+        this.stacks = stacks;
         this.slotIndex = slotIndex;
     }
 
@@ -49,7 +49,7 @@ public class FoldPlaceholderEmiIngredient implements FoldSlotEmiIngredient {
 
     @Override
     public EmiIngredient copy() {
-        return new FoldPlaceholderEmiIngredient(group, List.copyOf(stacks), slotIndex);
+        return new FoldPlaceholderEmiIngredient(group, stacks, slotIndex);
     }
 
     @Override

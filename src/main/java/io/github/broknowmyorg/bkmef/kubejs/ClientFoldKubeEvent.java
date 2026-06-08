@@ -15,7 +15,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
@@ -28,6 +30,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 public class ClientFoldKubeEvent implements FoldKubeEvent {
@@ -193,28 +196,23 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         }
 
         ArrayList<Predicate<EmiStack>> matchers = new ArrayList<>();
+        addFilterMatcher(cx, options, matchers, "id", ClientFoldKubeEvent::idMatcher);
+        addFilterMatcher(cx, options, matchers, "ids", ClientFoldKubeEvent::idMatcher);
+        addFilterMatcher(cx, options, matchers, "mod", ClientFoldKubeEvent::modMatcher);
+        addFilterMatcher(cx, options, matchers, "mods", ClientFoldKubeEvent::modMatcher);
+        addSpawnEggMatcher(cx, options, matchers);
+        addFilterMatcher(cx, options, matchers, "block", ClientFoldKubeEvent::blockMatcher);
+        addFilterMatcher(cx, options, matchers, "blocks", ClientFoldKubeEvent::blockMatcher);
+        addFilterMatcher(cx, options, matchers, "tag", ClientFoldKubeEvent::itemTagMatcher);
+        addFilterMatcher(cx, options, matchers, "tags", ClientFoldKubeEvent::itemTagMatcher);
+        addFilterMatcher(cx, options, matchers, "blockTag", ClientFoldKubeEvent::blockTagMatcher);
+        addFilterMatcher(cx, options, matchers, "blockTags", ClientFoldKubeEvent::blockTagMatcher);
         addFilterMatcher(cx, options, matchers, "all", ClientFoldKubeEvent::allMatcher);
         addFilterMatcher(cx, options, matchers, "any", ClientFoldKubeEvent::anyMatcher);
         addNegatedFilterMatcher(cx, options, matchers, "none");
         addNegatedFilterMatcher(cx, options, matchers, "not");
         addFilterMatcher(cx, options, matchers, "item", ClientFoldKubeEvent::itemMatcher);
         addFilterMatcher(cx, options, matchers, "ingredient", ClientFoldKubeEvent::itemMatcher);
-        addFilterMatcher(cx, options, matchers, "id", ClientFoldKubeEvent::idMatcher);
-        addFilterMatcher(cx, options, matchers, "ids", ClientFoldKubeEvent::idMatcher);
-        addFilterMatcher(cx, options, matchers, "mod", ClientFoldKubeEvent::modMatcher);
-        addFilterMatcher(cx, options, matchers, "mods", ClientFoldKubeEvent::modMatcher);
-        addFilterMatcher(cx, options, matchers, "tag", ClientFoldKubeEvent::itemTagMatcher);
-        addFilterMatcher(cx, options, matchers, "tags", ClientFoldKubeEvent::itemTagMatcher);
-        addFilterMatcher(cx, options, matchers, "block", ClientFoldKubeEvent::blockMatcher);
-        addFilterMatcher(cx, options, matchers, "blocks", ClientFoldKubeEvent::blockMatcher);
-        addFilterMatcher(cx, options, matchers, "blockTag", ClientFoldKubeEvent::blockTagMatcher);
-        addFilterMatcher(cx, options, matchers, "blockTags", ClientFoldKubeEvent::blockTagMatcher);
-
-        if (hasOption(cx, options, "spawnEggs")) {
-            Object spawnEggs = getOption(cx, options, "spawnEggs");
-            Predicate<EmiStack> matcher = spawnEggMatcher();
-            matchers.add(Boolean.FALSE.equals(spawnEggs) ? matcher.negate() : matcher);
-        }
 
         return stack -> {
             for (Predicate<EmiStack> matcher : matchers) {
@@ -261,6 +259,14 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         }
     }
 
+    private static void addSpawnEggMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers) {
+        if (hasOption(cx, options, "spawnEggs")) {
+            Object spawnEggs = getOption(cx, options, "spawnEggs");
+            Predicate<EmiStack> matcher = spawnEggMatcher();
+            matchers.add(Boolean.FALSE.equals(spawnEggs) ? matcher.negate() : matcher);
+        }
+    }
+
     private static void addNegatedFilterMatcher(Context cx, Object options, ArrayList<Predicate<EmiStack>> matchers, String key) {
         if (hasOption(cx, options, key)) {
             matchers.add(anyMatcher(cx, getOption(cx, options, key)).negate());
@@ -301,9 +307,10 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
 
     static Predicate<EmiStack> fluidMatcher(Context cx, Object filter) {
         FluidIngredient ingredient = (FluidIngredient) RecipeViewerEntryType.FLUID.wrapPredicate(cx, filter);
+        Map<Fluid, Boolean> cache = new ConcurrentHashMap<>();
         return stack -> {
             Fluid fluid = stack.getKeyOfType(Fluid.class);
-            return fluid != null && ingredient.test(new FluidStack(fluid, 1000));
+            return fluid != null && cache.computeIfAbsent(fluid, key -> ingredient.test(new FluidStack(key, 1000)));
         };
     }
 
@@ -317,14 +324,14 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
     }
 
     static Predicate<EmiStack> itemTagMatcher(Object tags) {
-        Set<ResourceLocation> tagSet = tagIds(tags);
+        Set<TagKey<Item>> tagSet = itemTags(tags);
         return stack -> {
             ItemStack itemStack = stack.getItemStack();
             if (itemStack.isEmpty()) {
                 return false;
             }
-            for (ResourceLocation tag : tagSet) {
-                if (itemStack.is(ItemTags.create(tag))) {
+            for (TagKey<Item> tag : tagSet) {
+                if (itemStack.is(tag)) {
                     return true;
                 }
             }
@@ -338,7 +345,7 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
             namespaces.add(normalizeModId(String.valueOf(mod)));
         }
 
-        return stack -> stack.getId() != null && namespaces.contains(stack.getId().getNamespace().toLowerCase(Locale.ROOT));
+        return stack -> stack.getId() != null && namespaces.contains(stack.getId().getNamespace());
     }
 
     static Predicate<EmiStack> blockMatcher(Object blocks) {
@@ -354,14 +361,14 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
     }
 
     static Predicate<EmiStack> blockTagMatcher(Object tags) {
-        Set<ResourceLocation> tagSet = tagIds(tags);
+        Set<TagKey<Block>> tagSet = blockTags(tags);
         return stack -> {
             Block block = blockOf(stack);
             if (block == null) {
                 return false;
             }
-            for (ResourceLocation tag : tagSet) {
-                if (block.builtInRegistryHolder().is(BlockTags.create(tag))) {
+            for (TagKey<Block> tag : tagSet) {
+                if (block.builtInRegistryHolder().is(tag)) {
                     return true;
                 }
             }
@@ -423,6 +430,22 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         Set<ResourceLocation> tagSet = new HashSet<>();
         for (Object tag : ListJS.orSelf(tags)) {
             tagSet.add(normalizeTagId(String.valueOf(tag)));
+        }
+        return tagSet;
+    }
+
+    private static Set<TagKey<Item>> itemTags(Object tags) {
+        Set<TagKey<Item>> tagSet = new HashSet<>();
+        for (ResourceLocation tag : tagIds(tags)) {
+            tagSet.add(ItemTags.create(tag));
+        }
+        return tagSet;
+    }
+
+    private static Set<TagKey<Block>> blockTags(Object tags) {
+        Set<TagKey<Block>> tagSet = new HashSet<>();
+        for (ResourceLocation tag : tagIds(tags)) {
+            tagSet.add(BlockTags.create(tag));
         }
         return tagSet;
     }
