@@ -156,6 +156,8 @@ BKMEF writes fold rebuild diagnostics to the log:
 
 `color` controls the folded card background. It accepts a number, a hex string such as `'#244E82'`, `'rainbow'` for sequential palette assignment, or `'random'` for a stable id-based palette color.
 
+When omitted, new groups receive colors in registration order from the muted rainbow palette; redefining an existing group id preserves its current color. Borders use a brighter shade of the background color, and tooltip titles, counts, and shortcuts use a lighter tint for readability. Expanded items and search results retain their group colors; results belonging to multiple groups show those colors along the bottom border and list each group in its own color.
+
 ## Behavior
 
 Left-click a collapsed group to expand it. Alt-left-click an expanded member to collapse its group.

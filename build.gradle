@@ -114,8 +114,18 @@ def foldLayoutProbe = tasks.register("foldLayoutProbe", JavaExec) {
     }
 }
 
+def foldColorProbe = tasks.register("foldColorProbe", JavaExec) {
+    group = "verification"
+    description = "Checks default group colors when scripts replace existing groups."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "io.github.broknowmyorg.bkmef.emi.FoldColorProbe"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 tasks.named("check") {
-    dependsOn(foldLayoutProbe)
+    dependsOn(foldLayoutProbe, foldColorProbe)
 }
 
 def generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

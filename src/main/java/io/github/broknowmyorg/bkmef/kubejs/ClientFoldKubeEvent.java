@@ -33,17 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 public class ClientFoldKubeEvent implements FoldKubeEvent {
-    private static final int[] RAINBOW_COLORS = {
-        0xFF7A2333,
-        0xFF7A3F18,
-        0xFF6B5C12,
-        0xFF2F6B2D,
-        0xFF17665D,
-        0xFF244E82,
-        0xFF543481,
-        0xFF7A2B62
-    };
-
     private int rainbowIndex;
 
     @Override
@@ -509,11 +498,11 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
         }
         Object unwrapped = Wrapper.unwrapped(options);
         if (unwrapped instanceof Number number) {
-            return new FoldDisplayOptions(number.intValue(), FoldDisplayOptions.DEFAULT_FILL_COLOR);
+            return new FoldDisplayOptions(number.intValue(), FoldRegistry.defaultFillColor(id));
         }
 
         int spread = FoldDisplayOptions.DEFAULT.spread();
-        int fillColor = FoldDisplayOptions.DEFAULT.fillColor();
+        int fillColor = FoldRegistry.defaultFillColor(id);
         Object spreadValue = getOption(cx, unwrapped, "spread");
         Object colorValue = getOption(cx, unwrapped, "color");
 
@@ -566,12 +555,10 @@ public class ClientFoldKubeEvent implements FoldKubeEvent {
 
         String string = String.valueOf(unwrapped).trim();
         if (string.equalsIgnoreCase("rainbow")) {
-            int color = RAINBOW_COLORS[Math.floorMod(rainbowIndex, RAINBOW_COLORS.length)];
-            rainbowIndex++;
-            return color;
+            return FoldDisplayOptions.rainbowColor(rainbowIndex++);
         }
         if (string.equalsIgnoreCase("random")) {
-            return RAINBOW_COLORS[Math.floorMod(id.hashCode(), RAINBOW_COLORS.length)];
+            return FoldDisplayOptions.rainbowColor(id.hashCode());
         }
         if (string.startsWith("#")) {
             return Integer.parseUnsignedInt(string.substring(1), 16);

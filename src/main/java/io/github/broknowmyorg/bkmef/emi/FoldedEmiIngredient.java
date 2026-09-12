@@ -117,13 +117,19 @@ public class FoldedEmiIngredient implements FoldSlotEmiIngredient {
     @Override
     public List<ClientTooltipComponent> getTooltip() {
         List<ClientTooltipComponent> tooltip = new ArrayList<>();
-        tooltip.add(EmiTooltipComponents.of(group.name().copy().withStyle(ChatFormatting.GOLD)));
-        tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.folded_entries", stacks.size()).withStyle(ChatFormatting.GRAY)));
-        tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.click_to_expand").withStyle(ChatFormatting.BLUE)));
+        int color = group.displayOptions().textColor();
+        tooltip.add(EmiTooltipComponents.of(group.name().copy().withStyle(style -> style.withColor(color).withBold(true))));
+        Component count = Component.literal(Integer.toString(stacks.size())).withStyle(style -> style.withColor(color));
+        tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.folded_entries", count).withStyle(ChatFormatting.GRAY)));
+        Component shortcut = Component.translatable("tooltip.broknowmyemifolder.left_click")
+            .withStyle(style -> style.withColor(color));
+        tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.click_to_expand", shortcut)
+            .withStyle(ChatFormatting.GRAY)));
 
         int previewSize = Math.min(stacks.size(), 6);
         for (int i = 0; i < previewSize; i++) {
-            tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.preview_entry", stacks.get(i).getName())
+            tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.preview_entry",
+                    stacks.get(i).getName().copy().withStyle(ChatFormatting.GRAY))
                 .withStyle(ChatFormatting.DARK_GRAY)));
         }
         if (stacks.size() > previewSize) {

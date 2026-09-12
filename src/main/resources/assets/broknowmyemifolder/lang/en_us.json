@@ -11,8 +11,10 @@
   "message.broknowmyemifolder.fold_loaded": "[BKMEF] Folder loaded: %s groups. Disable: bottom-left EMI settings.",
   "message.broknowmyemifolder.fold_reloaded": "[BKMEF] Folder reloaded: %s groups. Disable: bottom-left EMI settings.",
   "tooltip.broknowmyemifolder.folded_entries": "%s folded entries",
-  "tooltip.broknowmyemifolder.click_to_expand": "Click to expand",
-  "tooltip.broknowmyemifolder.alt_click_to_collapse": "Alt-click to collapse %s",
+  "tooltip.broknowmyemifolder.left_click": "Left-click",
+  "tooltip.broknowmyemifolder.alt_left_click": "Alt + left-click",
+  "tooltip.broknowmyemifolder.click_to_expand": "%s to expand",
+  "tooltip.broknowmyemifolder.alt_click_to_collapse": "%s to collapse %s",
   "tooltip.broknowmyemifolder.member_of_groups": "Folded groups:",
   "tooltip.broknowmyemifolder.preview_entry": "- %s",
   "tooltip.broknowmyemifolder.more_entries": "..."

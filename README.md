@@ -93,6 +93,8 @@ Options:
 
 `spread` controls the horizontal pixel offset between preview cards. `color` accepts a number, `'#RRGGBB'`, `'rainbow'`, or `'random'`.
 
+Omitting `color` assigns new groups colors from a muted rainbow palette; redefining an existing group id preserves its current color. Backgrounds stay dark; borders and tooltip accents follow the group color in both collapsed and expanded views.
+
 See [KubeJS API](docs/kubejs-api.md) for the supported script methods and options.
 
 ## In-game Settings
@@ -196,6 +198,8 @@ event.fold('my_pack:wooden_block_items', '木质方块物品', {
 ```
 
 `spread` 控制预览卡片之间的横向像素偏移。`color` 支持数字、`'#RRGGBB'`、`'rainbow'` 或 `'random'`。
+
+省略 `color` 时，新分组按注册顺序分配柔和彩虹色；重新定义已有分组 id 时保留原配色。背景保持深色，折叠框、展开框和提示文字的强调色跟随所属分组。
 
 支持的脚本方法和参数见 [KubeJS API](docs/kubejs-api.md)。
 

@@ -75,15 +75,17 @@ public class SearchFoldMemberEmiIngredient implements EmiIngredient {
     @Override
     public void render(GuiGraphics draw, int x, int y, float delta, int flags) {
         stack.render(draw, x, y, delta, flags);
-        draw.fill(x, y, x + 16, y + 1, 0xE060A5FA);
-        draw.fill(x, y + 15, x + 16, y + 16, 0xE060A5FA);
-        draw.fill(x, y, x + 1, y + 16, 0xE060A5FA);
-        draw.fill(x + 15, y, x + 16, y + 16, 0xE060A5FA);
+        int color = groups.getFirst().displayOptions().borderColor();
+        draw.fill(x, y, x + 16, y + 1, color);
+        draw.fill(x, y + 15, x + 16, y + 16, color);
+        draw.fill(x, y, x + 1, y + 16, color);
+        draw.fill(x + 15, y, x + 16, y + 16, color);
         if (groups.size() > 1) {
-            draw.fill(x + 2, y + 2, x + 14, y + 3, 0xE0FFD166);
-            draw.fill(x + 2, y + 13, x + 14, y + 14, 0xE0FFD166);
-            draw.fill(x + 2, y + 2, x + 3, y + 14, 0xE0FFD166);
-            draw.fill(x + 13, y + 2, x + 14, y + 14, 0xE0FFD166);
+            int segments = Math.min(groups.size(), 16);
+            for (int i = 0; i < segments; i++) {
+                draw.fill(x + i * 16 / segments, y + 15, x + (i + 1) * 16 / segments, y + 16,
+                    groups.get(i).displayOptions().borderColor());
+            }
         }
     }
 
@@ -91,10 +93,11 @@ public class SearchFoldMemberEmiIngredient implements EmiIngredient {
     public List<ClientTooltipComponent> getTooltip() {
         List<ClientTooltipComponent> tooltip = new ArrayList<>(stack.getTooltip());
         tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.member_of_groups")
-            .withStyle(ChatFormatting.BLUE)));
+            .withStyle(ChatFormatting.GRAY)));
         for (FoldGroup group : groups) {
-            tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.preview_entry", group.name())
-                .withStyle(ChatFormatting.GRAY)));
+            Component name = group.name().copy().withStyle(style -> style.withColor(group.displayOptions().textColor()));
+            tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.preview_entry", name)
+                .withStyle(ChatFormatting.DARK_GRAY)));
         }
         return tooltip;
     }

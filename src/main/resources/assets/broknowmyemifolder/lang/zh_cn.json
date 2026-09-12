@@ -11,8 +11,10 @@
   "message.broknowmyemifolder.fold_loaded": "[BKMEF] 折叠者已加载：%s 组。禁用：左下角 EMI 设置。",
   "message.broknowmyemifolder.fold_reloaded": "[BKMEF] 折叠者已重载：%s 组。禁用：左下角 EMI 设置。",
   "tooltip.broknowmyemifolder.folded_entries": "%s 个折叠条目",
-  "tooltip.broknowmyemifolder.click_to_expand": "点击展开",
-  "tooltip.broknowmyemifolder.alt_click_to_collapse": "Alt+点击收起 %s",
+  "tooltip.broknowmyemifolder.left_click": "左键",
+  "tooltip.broknowmyemifolder.alt_left_click": "Alt + 左键",
+  "tooltip.broknowmyemifolder.click_to_expand": "%s 展开",
+  "tooltip.broknowmyemifolder.alt_click_to_collapse": "%s 收起 %s",
   "tooltip.broknowmyemifolder.member_of_groups": "所属折叠组：",
   "tooltip.broknowmyemifolder.preview_entry": "- %s",
   "tooltip.broknowmyemifolder.more_entries": "..."

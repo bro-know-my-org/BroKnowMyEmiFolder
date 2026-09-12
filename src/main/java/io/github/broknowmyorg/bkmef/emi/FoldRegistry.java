@@ -61,6 +61,9 @@ public final class FoldRegistry {
     }
 
     public static void add(ResourceLocation id, Component name, FoldMatcher matcher, FoldDisplayOptions displayOptions) {
+        if (displayOptions == FoldDisplayOptions.DEFAULT) {
+            displayOptions = new FoldDisplayOptions(displayOptions.spread(), defaultFillColor(id));
+        }
         GROUPS.removeIf(group -> group.id().equals(id));
         GROUPS.add(new FoldGroup(id, name, matcher, unfoldersFor(id), displayOptions));
         rebuildGroupIndex();
@@ -83,6 +86,15 @@ public final class FoldRegistry {
     public static void unfoldAll(FoldMatcher unfolder) {
         GLOBAL_UNFOLDERS.add(unfolder);
         version++;
+    }
+
+    public static int defaultFillColor(ResourceLocation id) {
+        for (FoldGroup group : GROUPS) {
+            if (group.id().equals(id)) {
+                return group.displayOptions().fillColor();
+            }
+        }
+        return FoldDisplayOptions.rainbowColor(GROUPS.size());
     }
 
     public static int groupCount() {

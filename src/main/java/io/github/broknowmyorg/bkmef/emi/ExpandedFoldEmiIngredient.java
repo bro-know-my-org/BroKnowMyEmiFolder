@@ -59,17 +59,22 @@ public class ExpandedFoldEmiIngredient implements EmiIngredient {
     @Override
     public void render(GuiGraphics draw, int x, int y, float delta, int flags) {
         delegate.render(draw, x, y, delta, flags);
-        draw.fill(x, y, x + 16, y + 1, 0xE060A5FA);
-        draw.fill(x, y + 15, x + 16, y + 16, 0xE060A5FA);
-        draw.fill(x, y, x + 1, y + 16, 0xE060A5FA);
-        draw.fill(x + 15, y, x + 16, y + 16, 0xE060A5FA);
+        int color = group.displayOptions().borderColor();
+        draw.fill(x, y, x + 16, y + 1, color);
+        draw.fill(x, y + 15, x + 16, y + 16, color);
+        draw.fill(x, y, x + 1, y + 16, color);
+        draw.fill(x + 15, y, x + 16, y + 16, color);
     }
 
     @Override
     public List<ClientTooltipComponent> getTooltip() {
         List<ClientTooltipComponent> tooltip = new ArrayList<>(delegate.getTooltip());
-        tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.alt_click_to_collapse", group.name())
-            .withStyle(ChatFormatting.BLUE)));
+        int color = group.displayOptions().textColor();
+        Component shortcut = Component.translatable("tooltip.broknowmyemifolder.alt_left_click")
+            .withStyle(style -> style.withColor(color));
+        Component name = group.name().copy().withStyle(style -> style.withColor(color));
+        tooltip.add(EmiTooltipComponents.of(Component.translatable("tooltip.broknowmyemifolder.alt_click_to_collapse", shortcut, name)
+            .withStyle(ChatFormatting.GRAY)));
         return tooltip;
     }
 }
