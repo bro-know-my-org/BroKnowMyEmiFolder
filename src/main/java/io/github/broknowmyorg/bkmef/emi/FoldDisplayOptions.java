@@ -9,11 +9,18 @@ public record FoldDisplayOptions(int spread, int fillColor) {
         fillColor = fillColor | 0xFF000000;
     }
 
+    public static int borderColor(int fillColor) {
+        int red = Math.min(255, ((fillColor >>> 16) & 255) * 2 + 32);
+        int green = Math.min(255, ((fillColor >>> 8) & 255) * 2 + 32);
+        int blue = Math.min(255, (fillColor & 255) * 2 + 32);
+        return 0xFF000000 | (red << 16) | (green << 8) | blue;
+    }
+
     public int reservedSlots(int stackCount) {
         if (stackCount <= 1) {
             return 1;
         }
-        int width = 16 + (stackCount - 1) * spread;
+        int width = 18 + (stackCount - 1) * spread;
         return Math.max(1, (width + 17) / 18);
     }
 }

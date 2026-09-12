@@ -220,12 +220,7 @@ public final class FoldRegistry {
             .toList();
         int startOffset = folded.size();
         int reservedSlots = FoldLayoutContext.reservedSlots(group.displayOptions(), groupStacks.size(), startOffset);
-        int spacerSlots = FoldLayoutContext.spacerSlotsBefore(reservedSlots, startOffset);
-        for (int i = 0; i < spacerSlots; i++) {
-            folded.add(new FoldSpacerEmiIngredient());
-        }
         folded.add(new FoldedEmiIngredient(group, groupStacks));
-        reservedSlots = FoldLayoutContext.reservedSlots(group.displayOptions(), groupStacks.size(), folded.size() - 1);
         for (int i = 1; i < reservedSlots; i++) {
             folded.add(new FoldPlaceholderEmiIngredient(group, groupStacks, i));
         }

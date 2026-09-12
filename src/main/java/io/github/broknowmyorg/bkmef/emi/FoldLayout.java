@@ -5,8 +5,6 @@ import java.util.Set;
 
 public final class FoldLayout {
     private static final int ENTRY_SIZE = 18;
-    private static final int ICON_SIZE = 16;
-    private static final int SLOT_PADDING = 1;
 
     private FoldLayout() {
     }
@@ -44,7 +42,7 @@ public final class FoldLayout {
         int pixel = (start - rowStartOffset(row, widths)) * ENTRY_SIZE;
 
         for (int i = 0; i < stackCount; i++) {
-            while (pixel + SLOT_PADDING + ICON_SIZE > widths[row] * ENTRY_SIZE) {
+            while (pixel + ENTRY_SIZE > widths[row] * ENTRY_SIZE) {
                 row++;
                 pixel = 0;
                 if (row >= widths.length) {
@@ -54,8 +52,8 @@ public final class FoldLayout {
             }
 
             int rowStart = rowStartOffset(row, widths);
-            int leftLocalOffset = rowStart + (pixel + SLOT_PADDING) / ENTRY_SIZE;
-            int rightLocalOffset = rowStart + (pixel + SLOT_PADDING + ICON_SIZE - 1) / ENTRY_SIZE;
+            int leftLocalOffset = rowStart + pixel / ENTRY_SIZE;
+            int rightLocalOffset = rowStart + (pixel + ENTRY_SIZE - 1) / ENTRY_SIZE;
             for (int localOffset = leftLocalOffset; localOffset <= rightLocalOffset; localOffset++) {
                 occupiedSlots.add(page * pageSize + localOffset - start);
             }

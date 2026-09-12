@@ -1,6 +1,7 @@
 package io.github.broknowmyorg.bkmef.emi;
 
 import java.util.Arrays;
+import java.util.function.Supplier;
 
 public final class FoldLayoutContext {
     private static final ThreadLocal<Layout> CURRENT = new ThreadLocal<>();
@@ -14,6 +15,20 @@ public final class FoldLayoutContext {
 
     public static void end() {
         CURRENT.remove();
+    }
+
+    public static <T> T withLayout(int[] widths, int pageSize, Supplier<T> action) {
+        Layout previous = CURRENT.get();
+        begin(widths, pageSize);
+        try {
+            return action.get();
+        } finally {
+            if (previous == null) {
+                end();
+            } else {
+                CURRENT.set(previous);
+            }
+        }
     }
 
     public static int reservedSlots(FoldDisplayOptions options, int stackCount, int startOffset) {

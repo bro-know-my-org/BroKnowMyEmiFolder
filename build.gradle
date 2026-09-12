@@ -58,6 +58,7 @@ neoForge {
     runs {
         client {
             client()
+            gameDirectory = project.file('run')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -101,6 +102,20 @@ tasks.register("foldPerformanceProbe", JavaExec) {
     }
     jvmArgs "-Xms512m", "-Xmx2G"
     systemProperties System.getProperties().findAll { key, ignored -> key.toString().startsWith("bkmef.probe.") }
+}
+
+def foldLayoutProbe = tasks.register("foldLayoutProbe", JavaExec) {
+    group = "verification"
+    description = "Checks folded card borders at slot, row, and page boundaries."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "io.github.broknowmyorg.bkmef.emi.FoldLayoutProbe"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.named("check") {
+    dependsOn(foldLayoutProbe)
 }
 
 def generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
