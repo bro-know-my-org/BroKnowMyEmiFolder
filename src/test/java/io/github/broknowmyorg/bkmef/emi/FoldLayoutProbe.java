@@ -20,6 +20,8 @@ public final class FoldLayoutProbe {
         expectSlots(new int[] {0, 1}, touching, 2, 1, new int[] {2, 2}, 4);
         FoldDisplayOptions overlapping = new FoldDisplayOptions(0, FoldDisplayOptions.DEFAULT_FILL_COLOR);
         expectSlots(new int[] {0}, overlapping, 20, 0, new int[] {2}, 2);
+        FoldDisplayOptions excessiveSpread = new FoldDisplayOptions(100_000, FoldDisplayOptions.DEFAULT_FILL_COLOR);
+        expect(FoldDisplayOptions.MAX_SPREAD, excessiveSpread.spread(), "script spread limit");
         expectSlots(new int[] {0, 1, 2}, FoldDisplayOptions.DEFAULT, 6, 0, new int[] {2, 2}, 4);
         // Start immediately in the last free slot, then continue the same 4px
         // spread on the next row. No leading spacer or oversized trailing gap.

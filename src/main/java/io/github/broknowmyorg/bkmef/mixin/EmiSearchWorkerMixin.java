@@ -8,13 +8,29 @@ import io.github.broknowmyorg.bkmef.emi.FoldPlaceholderEmiIngredient;
 import io.github.broknowmyorg.bkmef.emi.FoldedEmiIngredient;
 import io.github.broknowmyorg.bkmef.emi.SearchFoldMemberEmiIngredient;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Mixin(targets = "dev.emi.emi.search.EmiSearch$SearchWorker")
 public class EmiSearchWorkerMixin {
+    @Unique
+    private final Map<EmiStack, SearchFoldMemberEmiIngredient> bkmef$members = new HashMap<>();
+    @Unique
+    private EmiSearch.CompiledQuery bkmef$query;
+
+    @Inject(method = "run", at = @At("HEAD"), remap = false)
+    private void bkmef$beginSearch(CallbackInfo ci) {
+        bkmef$query = EmiSearch.compiledQuery;
+        bkmef$members.clear();
+    }
+
     @Redirect(
         method = "run",
         at = @At(value = "INVOKE", target = "Ldev/emi/emi/api/stack/EmiIngredient;getEmiStacks()Ljava/util/List;"),
@@ -22,9 +38,9 @@ public class EmiSearchWorkerMixin {
     )
     private List<EmiStack> bkmef$getSearchStacks(EmiIngredient ingredient) {
         if (ingredient instanceof FoldedEmiIngredient folded) {
-            return folded.getSearchStacks(EmiSearch.compiledQuery);
+            return folded.getSearchStacks(bkmef$query);
         } else if (ingredient instanceof FoldPlaceholderEmiIngredient placeholder) {
-            return placeholder.getSearchStacks(EmiSearch.compiledQuery);
+            return placeholder.getSearchStacks(bkmef$query);
         }
         return ingredient.getEmiStacks();
     }
@@ -35,18 +51,19 @@ public class EmiSearchWorkerMixin {
         remap = false
     )
     private boolean bkmef$addSearchStack(List<EmiIngredient> stacks, Object ingredient) {
-        if (ingredient instanceof FoldedEmiIngredient folded && EmiSearch.compiledQuery != null && !EmiSearch.compiledQuery.isEmpty()) {
-            for (EmiStack stack : folded.getMatchingStacks(EmiSearch.compiledQuery)) {
-                SearchFoldMemberEmiIngredient.addOrMerge(stacks, stack, folded.getGroup());
+        if (ingredient instanceof FoldedEmiIngredient folded && bkmef$query != null && !bkmef$query.isEmpty()) {
+            for (EmiStack stack : folded.getMatchingStacks(bkmef$query)) {
+                SearchFoldMemberEmiIngredient.addOrMerge(stacks, bkmef$members, stack, folded.getGroup());
             }
             return true;
         }
-        if (ingredient instanceof ExpandedFoldEmiIngredient expanded && EmiSearch.compiledQuery != null && !EmiSearch.compiledQuery.isEmpty()) {
+        if (ingredient instanceof ExpandedFoldEmiIngredient expanded && bkmef$query != null && !bkmef$query.isEmpty()) {
             List<EmiStack> expandedStacks = expanded.getEmiStacks();
             if (expandedStacks.size() == 1) {
-                SearchFoldMemberEmiIngredient.addOrMerge(stacks, expandedStacks.getFirst(), expanded.getGroup());
+                SearchFoldMemberEmiIngredient.addOrMerge(stacks, bkmef$members, expandedStacks.getFirst(), expanded.getGroup());
+                return true;
             }
-            return true;
+            return stacks.add(expanded);
         }
         if (ingredient instanceof FoldPlaceholderEmiIngredient) {
             return true;

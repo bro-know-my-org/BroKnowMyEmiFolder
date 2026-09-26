@@ -1,6 +1,7 @@
 package io.github.broknowmyorg.bkmef.emi;
 
 public record FoldDisplayOptions(int spread, int fillColor) {
+    public static final int MAX_SPREAD = 18 * 16;
     private static final int[] RAINBOW_COLORS = {
         0xFF3F282B, 0xFF403225, 0xFF3B3825, 0xFF293C2D,
         0xFF253B3B, 0xFF293447, 0xFF352D43, 0xFF402D38
@@ -9,7 +10,7 @@ public record FoldDisplayOptions(int spread, int fillColor) {
     public static final FoldDisplayOptions DEFAULT = new FoldDisplayOptions(4, DEFAULT_FILL_COLOR);
 
     public FoldDisplayOptions {
-        spread = Math.max(0, spread);
+        spread = Math.clamp(spread, 0, MAX_SPREAD);
         fillColor = fillColor | 0xFF000000;
     }
 

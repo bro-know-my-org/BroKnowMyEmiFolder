@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class SearchFoldMemberEmiIngredient implements EmiIngredient {
     private final EmiStack stack;
@@ -24,14 +25,16 @@ public class SearchFoldMemberEmiIngredient implements EmiIngredient {
         this.groups = new ArrayList<>(groups);
     }
 
-    public static void addOrMerge(List<EmiIngredient> results, EmiStack stack, FoldGroup group) {
-        for (EmiIngredient result : results) {
-            if (result instanceof SearchFoldMemberEmiIngredient member && member.stack.equals(stack)) {
-                member.addGroup(group);
-                return;
-            }
+    public static void addOrMerge(List<EmiIngredient> results, Map<EmiStack, SearchFoldMemberEmiIngredient> members,
+                                  EmiStack stack, FoldGroup group) {
+        SearchFoldMemberEmiIngredient member = members.get(stack);
+        if (member != null) {
+            member.addGroup(group);
+            return;
         }
-        results.add(new SearchFoldMemberEmiIngredient(stack, group));
+        member = new SearchFoldMemberEmiIngredient(stack, group);
+        members.put(stack, member);
+        results.add(member);
     }
 
     private void addGroup(FoldGroup group) {
