@@ -15,7 +15,6 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -23,96 +22,132 @@ public final class FoldRegistry {
     private static final int LARGE_GROUP_MATCH_THRESHOLD = 512;
     private static final double SLOW_REBUILD_WARN_MS = 100.0;
 
-    private static final List<FoldGroup> GROUPS = new ArrayList<>();
-    private static final Map<ResourceLocation, List<FoldMatcher>> GROUP_UNFOLDERS = new LinkedHashMap<>();
-    private static final List<FoldMatcher> GLOBAL_UNFOLDERS = new ArrayList<>();
     private static final Set<ResourceLocation> EXPANDED_GROUPS = new HashSet<>();
-    private static final Map<ResourceLocation, List<FoldGroup>> GROUPS_BY_ID = new HashMap<>();
-    private static final Map<String, List<FoldGroup>> GROUPS_BY_NAMESPACE = new HashMap<>();
-    private static final List<FoldGroup> FALLBACK_GROUPS = new ArrayList<>();
-    private static final Map<FoldGroup, Integer> GROUP_ORDER = new IdentityHashMap<>();
+    private static final ThreadLocal<RegistryState> STAGING = new ThreadLocal<>();
+    private static volatile RegistryState active = new RegistryState();
+    private static long rebuildSequence;
+    private static long publishedSequence;
     private static int version;
     private static List<? extends EmiIngredient> cachedSource;
-    private static FoldLayoutContext.Key cachedLayoutKey;
     private static int cachedVersion = -1;
-    private static List<? extends EmiIngredient> cachedFolded;
+    private static FoldMembership cachedMembership;
+    private static final Map<FoldLayoutContext.Key, List<? extends EmiIngredient>> CACHED_LAYOUTS = new LinkedHashMap<>();
 
     private FoldRegistry() {
     }
 
-    public static void reloadStaticGroups() {
-        GROUPS.clear();
-        GROUP_UNFOLDERS.clear();
-        GLOBAL_UNFOLDERS.clear();
-        rebuildGroupIndex();
-        version++;
+    public static void rebuildTogether(Runnable rebuild) {
+        if (STAGING.get() != null) {
+            throw new IllegalStateException("Nested fold registry rebuild");
+        }
+        long sequence;
+        synchronized (FoldRegistry.class) {
+            sequence = ++rebuildSequence;
+        }
+        RegistryState staged = new RegistryState();
+        STAGING.set(staged);
+        try {
+            rebuild.run();
+            synchronized (FoldRegistry.class) {
+                if (sequence > publishedSequence) {
+                    active = staged;
+                    publishedSequence = sequence;
+                    version++;
+                }
+            }
+        } finally {
+            STAGING.remove();
+        }
     }
 
-    public static void add(ResourceLocation id, Component name, Predicate<EmiStack> matcher) {
+    public static synchronized void reloadStaticGroups() {
+        RegistryState state = state();
+        state.groups.clear();
+        state.groupUnfolders.clear();
+        state.globalUnfolders.clear();
+        state.groupIndexDirty = true;
+        markChanged();
+    }
+
+    public static synchronized void add(ResourceLocation id, Component name, Predicate<EmiStack> matcher) {
         add(id, name, FoldMatcher.from(matcher));
     }
 
-    public static void add(ResourceLocation id, Component name, Predicate<EmiStack> matcher, FoldDisplayOptions displayOptions) {
+    public static synchronized void add(ResourceLocation id, Component name, Predicate<EmiStack> matcher, FoldDisplayOptions displayOptions) {
         add(id, name, FoldMatcher.from(matcher), displayOptions);
     }
 
-    public static void add(ResourceLocation id, Component name, FoldMatcher matcher) {
+    public static synchronized void add(ResourceLocation id, Component name, FoldMatcher matcher) {
         add(id, name, matcher, FoldDisplayOptions.DEFAULT);
     }
 
-    public static void add(ResourceLocation id, Component name, FoldMatcher matcher, FoldDisplayOptions displayOptions) {
+    public static synchronized void add(ResourceLocation id, Component name, FoldMatcher matcher, FoldDisplayOptions displayOptions) {
+        RegistryState state = state();
         if (displayOptions == FoldDisplayOptions.DEFAULT) {
             displayOptions = new FoldDisplayOptions(displayOptions.spread(), defaultFillColor(id));
         }
-        GROUPS.removeIf(group -> group.id().equals(id));
-        GROUPS.add(new FoldGroup(id, name, matcher, unfoldersFor(id), displayOptions));
-        rebuildGroupIndex();
-        version++;
+        state.groups.removeIf(group -> group.id().equals(id));
+        state.groups.add(new FoldGroup(id, name, matcher, unfoldersFor(state, id), displayOptions));
+        state.groupIndexDirty = true;
+        markChanged();
     }
 
-    public static void unfold(ResourceLocation groupId, Predicate<EmiStack> unfolder) {
+    public static synchronized void unfold(ResourceLocation groupId, Predicate<EmiStack> unfolder) {
         unfold(groupId, FoldMatcher.from(unfolder));
     }
 
-    public static void unfold(ResourceLocation groupId, FoldMatcher unfolder) {
-        unfoldersFor(groupId).add(unfolder);
-        version++;
+    public static synchronized void unfold(ResourceLocation groupId, FoldMatcher unfolder) {
+        unfoldersFor(state(), groupId).add(unfolder);
+        markChanged();
     }
 
-    public static void unfoldAll(Predicate<EmiStack> unfolder) {
+    public static synchronized void unfoldAll(Predicate<EmiStack> unfolder) {
         unfoldAll(FoldMatcher.from(unfolder));
     }
 
-    public static void unfoldAll(FoldMatcher unfolder) {
-        GLOBAL_UNFOLDERS.add(unfolder);
-        version++;
+    public static synchronized void unfoldAll(FoldMatcher unfolder) {
+        state().globalUnfolders.add(unfolder);
+        markChanged();
     }
 
-    public static int defaultFillColor(ResourceLocation id) {
-        for (FoldGroup group : GROUPS) {
+    public static synchronized int defaultFillColor(ResourceLocation id) {
+        RegistryState state = state();
+        for (FoldGroup group : state.groups) {
             if (group.id().equals(id)) {
                 return group.displayOptions().fillColor();
             }
         }
-        return FoldDisplayOptions.rainbowColor(GROUPS.size());
+        return FoldDisplayOptions.rainbowColor(state.groups.size());
     }
 
-    public static int groupCount() {
-        return GROUPS.size();
+    public static synchronized int groupCount() {
+        return state().groups.size();
     }
 
-    public static List<? extends EmiIngredient> foldIndex(List<? extends EmiIngredient> source) {
-        if (!BkmefClientConfig.isFoldingEnabled() || GROUPS.isEmpty() || source.isEmpty()) {
+    public static synchronized List<? extends EmiIngredient> foldIndex(List<? extends EmiIngredient> source) {
+        RegistryState state = active;
+        if (!BkmefClientConfig.isFoldingEnabled() || state.groups.isEmpty() || source.isEmpty()) {
             return source;
         }
 
         FoldLayoutContext.Key layoutKey = FoldLayoutContext.currentKey();
-        if (source == cachedSource && version == cachedVersion && Objects.equals(layoutKey, cachedLayoutKey)) {
+        if (source != cachedSource || version != cachedVersion) {
+            cachedSource = source;
+            cachedVersion = version;
+            cachedMembership = null;
+            CACHED_LAYOUTS.clear();
+        }
+        List<? extends EmiIngredient> cachedFolded = CACHED_LAYOUTS.get(layoutKey);
+        if (cachedFolded != null) {
             return cachedFolded;
         }
 
         long start = System.nanoTime();
-        FoldMembership foldMembership = collectMembership(source);
+        FoldMembership foldMembership = cachedMembership;
+        if (foldMembership == null) {
+            foldMembership = collectMembership(state, source);
+            cachedMembership = foldMembership;
+        }
         List<EmiIngredient> folded = buildFoldedIndex(source, foldMembership);
         double elapsedMs = (System.nanoTime() - start) / 1_000_000.0;
 
@@ -120,7 +155,7 @@ public final class FoldRegistry {
             "Rebuilt folded EMI index: source={}, folded={}, groups={}, matchedEntries={}, memberships={}, time={}ms",
             source.size(),
             folded.size(),
-            GROUPS.size(),
+            state.groups.size(),
             foldMembership.matchedEntryCount(),
             foldMembership.membershipCount(),
             String.format("%.2f", elapsedMs)
@@ -130,34 +165,35 @@ public final class FoldRegistry {
                 "BKMEF folded EMI index rebuild took {}ms for {} source entries and {} groups",
                 String.format("%.2f", elapsedMs),
                 source.size(),
-                GROUPS.size()
+                state.groups.size()
             );
         }
 
-        cachedSource = source;
-        cachedLayoutKey = layoutKey;
-        cachedVersion = version;
         cachedFolded = List.copyOf(folded);
+        if (CACHED_LAYOUTS.size() >= 3) {
+            CACHED_LAYOUTS.remove(CACHED_LAYOUTS.keySet().iterator().next());
+        }
+        CACHED_LAYOUTS.put(layoutKey, cachedFolded);
         return cachedFolded;
     }
 
-    public static boolean isExpanded(FoldGroup group) {
+    public static synchronized boolean isExpanded(FoldGroup group) {
         return EXPANDED_GROUPS.contains(group.id());
     }
 
-    public static void toggle(FoldGroup group) {
+    public static synchronized void toggle(FoldGroup group) {
         if (!EXPANDED_GROUPS.remove(group.id())) {
             EXPANDED_GROUPS.add(group.id());
         }
         version++;
     }
 
-    public static FoldGroup getExpandedGroupFor(EmiIngredient ingredient) {
+    public static synchronized FoldGroup getExpandedGroupFor(EmiIngredient ingredient) {
         EmiStack stack = representativeStack(ingredient);
         if (stack == null) {
             return null;
         }
-        for (FoldGroup group : matchingGroups(new StackFacts(stack))) {
+        for (FoldGroup group : matchingGroups(active, new StackFacts(stack))) {
             if (isExpanded(group)) {
                 return group;
             }
@@ -174,14 +210,14 @@ public final class FoldRegistry {
         return stack.isEmpty() ? null : stack;
     }
 
-    private static FoldMembership collectMembership(List<? extends EmiIngredient> source) {
+    private static FoldMembership collectMembership(RegistryState state, List<? extends EmiIngredient> source) {
         Map<FoldGroup, List<EmiIngredient>> matchedGroups = new LinkedHashMap<>();
         Map<EmiIngredient, List<FoldGroup>> membership = new IdentityHashMap<>();
         int membershipCount = 0;
 
         for (EmiIngredient ingredient : source) {
             EmiStack stack = representativeStack(ingredient);
-            List<FoldGroup> groups = stack == null ? List.of() : matchingGroups(new StackFacts(stack));
+            List<FoldGroup> groups = stack == null ? List.of() : matchingGroups(state, new StackFacts(stack));
             if (groups.isEmpty()) {
                 continue;
             }
@@ -238,13 +274,13 @@ public final class FoldRegistry {
         }
     }
 
-    private static List<FoldGroup> matchingGroups(StackFacts facts) {
-        if (unfoldsGlobally(facts)) {
+    private static List<FoldGroup> matchingGroups(RegistryState state, StackFacts facts) {
+        if (unfoldsGlobally(state, facts)) {
             return List.of();
         }
 
         List<FoldGroup> groups = new ArrayList<>();
-        for (FoldGroup group : candidateGroups(facts)) {
+        for (FoldGroup group : candidateGroups(state, facts)) {
             if (group.matches(facts) && !group.unfolds(facts)) {
                 groups.add(group);
             }
@@ -252,14 +288,18 @@ public final class FoldRegistry {
         return List.copyOf(groups);
     }
 
-    private static List<FoldGroup> candidateGroups(StackFacts facts) {
-        ResourceLocation id = facts.id();
-        List<FoldGroup> byId = id == null ? List.of() : GROUPS_BY_ID.getOrDefault(id, List.of());
-        List<FoldGroup> byNamespace = id == null ? List.of() : GROUPS_BY_NAMESPACE.getOrDefault(facts.namespace(), List.of());
-        if (byId.isEmpty() && byNamespace.isEmpty()) {
-            return FALLBACK_GROUPS;
+    private static List<FoldGroup> candidateGroups(RegistryState state, StackFacts facts) {
+        if (state.groupIndexDirty) {
+            rebuildGroupIndex(state);
+            state.groupIndexDirty = false;
         }
-        if (FALLBACK_GROUPS.isEmpty()) {
+        ResourceLocation id = facts.id();
+        List<FoldGroup> byId = id == null ? List.of() : state.groupsById.getOrDefault(id, List.of());
+        List<FoldGroup> byNamespace = id == null ? List.of() : state.groupsByNamespace.getOrDefault(facts.namespace(), List.of());
+        if (byId.isEmpty() && byNamespace.isEmpty()) {
+            return state.fallbackGroups;
+        }
+        if (state.fallbackGroups.isEmpty()) {
             if (byNamespace.isEmpty()) {
                 return byId;
             }
@@ -268,27 +308,27 @@ public final class FoldRegistry {
             }
         }
 
-        List<FoldGroup> candidates = new ArrayList<>(FALLBACK_GROUPS.size() + byId.size() + byNamespace.size());
-        candidates.addAll(FALLBACK_GROUPS);
+        List<FoldGroup> candidates = new ArrayList<>(state.fallbackGroups.size() + byId.size() + byNamespace.size());
+        candidates.addAll(state.fallbackGroups);
         candidates.addAll(byId);
         candidates.addAll(byNamespace);
-        candidates.sort(Comparator.comparingInt(group -> GROUP_ORDER.getOrDefault(group, Integer.MAX_VALUE)));
+        candidates.sort(Comparator.comparingInt(group -> state.groupOrder.getOrDefault(group, Integer.MAX_VALUE)));
         return candidates;
     }
 
-    private static void rebuildGroupIndex() {
-        GROUPS_BY_ID.clear();
-        GROUPS_BY_NAMESPACE.clear();
-        FALLBACK_GROUPS.clear();
-        GROUP_ORDER.clear();
+    private static void rebuildGroupIndex(RegistryState state) {
+        state.groupsById.clear();
+        state.groupsByNamespace.clear();
+        state.fallbackGroups.clear();
+        state.groupOrder.clear();
 
-        for (int i = 0; i < GROUPS.size(); i++) {
-            FoldGroup group = GROUPS.get(i);
-            GROUP_ORDER.put(group, i);
+        for (int i = 0; i < state.groups.size(); i++) {
+            FoldGroup group = state.groups.get(i);
+            state.groupOrder.put(group, i);
             Set<ResourceLocation> ids = group.matcher().indexedIds();
             if (!ids.isEmpty()) {
                 for (ResourceLocation id : ids) {
-                    GROUPS_BY_ID.computeIfAbsent(id, ignored -> new ArrayList<>()).add(group);
+                    state.groupsById.computeIfAbsent(id, ignored -> new ArrayList<>()).add(group);
                 }
                 continue;
             }
@@ -296,21 +336,21 @@ public final class FoldRegistry {
             Set<String> namespaces = group.matcher().indexedNamespaces();
             if (!namespaces.isEmpty()) {
                 for (String namespace : namespaces) {
-                    GROUPS_BY_NAMESPACE.computeIfAbsent(namespace, ignored -> new ArrayList<>()).add(group);
+                    state.groupsByNamespace.computeIfAbsent(namespace, ignored -> new ArrayList<>()).add(group);
                 }
                 continue;
             }
 
-            FALLBACK_GROUPS.add(group);
+            state.fallbackGroups.add(group);
         }
     }
 
-    private static List<FoldMatcher> unfoldersFor(ResourceLocation groupId) {
-        return GROUP_UNFOLDERS.computeIfAbsent(groupId, ignored -> new ArrayList<>());
+    private static List<FoldMatcher> unfoldersFor(RegistryState state, ResourceLocation groupId) {
+        return state.groupUnfolders.computeIfAbsent(groupId, ignored -> new ArrayList<>());
     }
 
-    private static boolean unfoldsGlobally(StackFacts facts) {
-        for (FoldMatcher unfolder : GLOBAL_UNFOLDERS) {
+    private static boolean unfoldsGlobally(RegistryState state, StackFacts facts) {
+        for (FoldMatcher unfolder : state.globalUnfolders) {
             if (unfolder.matches(facts)) {
                 return true;
             }
@@ -333,6 +373,28 @@ public final class FoldRegistry {
                 );
             }
         }
+    }
+
+    private static RegistryState state() {
+        RegistryState staged = STAGING.get();
+        return staged == null ? active : staged;
+    }
+
+    private static void markChanged() {
+        if (STAGING.get() == null) {
+            version++;
+        }
+    }
+
+    private static final class RegistryState {
+        private final List<FoldGroup> groups = new ArrayList<>();
+        private final Map<ResourceLocation, List<FoldMatcher>> groupUnfolders = new LinkedHashMap<>();
+        private final List<FoldMatcher> globalUnfolders = new ArrayList<>();
+        private final Map<ResourceLocation, List<FoldGroup>> groupsById = new HashMap<>();
+        private final Map<String, List<FoldGroup>> groupsByNamespace = new HashMap<>();
+        private final List<FoldGroup> fallbackGroups = new ArrayList<>();
+        private final Map<FoldGroup, Integer> groupOrder = new IdentityHashMap<>();
+        private boolean groupIndexDirty = true;
     }
 
     private record FoldMembership(Map<FoldGroup, List<EmiIngredient>> matchedGroups,

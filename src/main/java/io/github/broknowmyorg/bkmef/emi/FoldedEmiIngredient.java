@@ -43,7 +43,7 @@ public class FoldedEmiIngredient implements FoldSlotEmiIngredient {
         return matchingStacks.isEmpty() ? List.of() : List.of(matchingStacks.getFirst());
     }
 
-    public List<EmiStack> getMatchingStacks(EmiSearch.CompiledQuery query) {
+    public synchronized List<EmiStack> getMatchingStacks(EmiSearch.CompiledQuery query) {
         if (query == null || query.isEmpty()) {
             return getEmiStacks();
         }

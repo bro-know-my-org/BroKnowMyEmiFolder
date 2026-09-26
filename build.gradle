@@ -124,8 +124,18 @@ def foldColorProbe = tasks.register("foldColorProbe", JavaExec) {
     }
 }
 
+def foldRegistryProbe = tasks.register("foldRegistryProbe", JavaExec) {
+    group = "verification"
+    description = "Checks atomic publication of fold groups during concurrent reloads."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "io.github.broknowmyorg.bkmef.emi.FoldRegistryProbe"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 tasks.named("check") {
-    dependsOn(foldLayoutProbe, foldColorProbe)
+    dependsOn(foldLayoutProbe, foldColorProbe, foldRegistryProbe)
 }
 
 def generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

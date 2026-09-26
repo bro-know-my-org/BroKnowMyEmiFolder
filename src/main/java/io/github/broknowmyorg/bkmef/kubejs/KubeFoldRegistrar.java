@@ -41,6 +41,10 @@ public final class KubeFoldRegistrar {
     }
 
     private static void rebuildFromKube(boolean notify) {
+        FoldRegistry.rebuildTogether(() -> rebuildGroups(notify));
+    }
+
+    private static void rebuildGroups(boolean notify) {
         long start = System.nanoTime();
         FoldRegistry.reloadStaticGroups();
         postFoldEvents();
