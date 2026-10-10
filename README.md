@@ -1,5 +1,13 @@
 # Bro Know My EMI Folder
 
+[![Latest release](https://img.shields.io/github/v/release/bro-know-my-org/BroKnowMyEmiFolder?style=flat-square&logo=github)](https://github.com/bro-know-my-org/BroKnowMyEmiFolder/releases/latest)
+[![CurseForge downloads](https://img.shields.io/curseforge/dt/1564728?style=flat-square&logo=curseforge&label=CurseForge%20downloads&color=F16436)](https://www.curseforge.com/projects/1564728)
+[![MIT license](https://flat.badgen.net/github/license/bro-know-my-org/BroKnowMyEmiFolder)](LICENSE)
+
+[![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-62B47A?style=flat-square)](https://www.minecraft.net/)
+[![NeoForge](https://img.shields.io/badge/Loader-NeoForge-F99A36?style=flat-square)](https://neoforged.net/)
+[![Java 21](https://img.shields.io/badge/Java-21-007396?style=flat-square)](https://adoptium.net/temurin/releases/?version=21)
+
 [English](#bro-know-my-emi-folder) | [中文](#中文)
 
 Bro Know My EMI Folder is an EMI addon for Minecraft 1.21.1 / NeoForge. It adds collapsible groups to EMI's index sidebar, with group definitions driven by KubeJS.
