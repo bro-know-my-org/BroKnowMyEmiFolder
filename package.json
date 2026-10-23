@@ -1,0 +1,15 @@
+{
+  "name": "bro-know-my-emi-folder-docs",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "docs:export": "node scripts/run-docs-gradle.mjs exportKubeJsApi",
+    "docs:generate": "pnpm docs:export && node scripts/generate-kubejs-api.mjs",
+    "docs:check": "pnpm docs:generate && node scripts/run-docs-gradle.mjs checkKubeJsApi",
+    "docs:dev": "pnpm docs:generate && vitepress docs",
+    "docs:build": "pnpm docs:check && vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": { "vitepress": "1.6.4" }
+}

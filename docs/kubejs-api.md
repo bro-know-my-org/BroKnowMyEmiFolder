@@ -27,26 +27,7 @@ RecipeViewerEvents.fold(event => {
 })
 ```
 
-## Methods
-
-```js
-event.fold(id, name, filter, options?)
-event.fold(name, filter, options?)
-event.foldFluid(id, name, filter, options?)
-event.foldFluid(name, filter, options?)
-event.foldId(id, name, ids, options?)
-event.foldId(name, ids, options?)
-event.foldMod(id, name, mods, options?)
-event.foldMod(name, mods, options?)
-event.foldSpawnEggs(id, name, options?)
-event.foldSpawnEggs(name, options?)
-event.unfold(groupId, filter)
-event.unfoldFluid(groupId, filter)
-event.unfoldId(groupId, ids)
-event.unfoldAll(filter)
-event.unfoldAllFluid(filter)
-event.unfoldAllId(ids)
-```
+## Parameters and Filters
 
 `id` is a stable group id, for example `'my_pack:ores'`.
 
@@ -166,6 +147,6 @@ Entries may belong to multiple fold groups. In the normal EMI index, each matchi
 
 KubeJS `RecipeViewerEvents.groupEntries` definitions are also consumed as fold groups where practical.
 
-## Full Example
+## More Examples
 
-See [`docs/examples/emi_folder.client.js`](examples/emi_folder.client.js) for a heavily commented bilingual client script based on a real modpack setup.
+See [examples](examples.md) for a minimal client script and a larger modpack example.
