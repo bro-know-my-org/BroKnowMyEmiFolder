@@ -1,0 +1,34 @@
+// This source set has no Minecraft/KubeJS dependencies: export parses source only.
+sourceSets {
+    apiDocs {
+        java.srcDir 'tools/api-docs'
+    }
+}
+
+def apiSourcePath = 'src/main/java/io/github/broknowmyorg/bkmef/kubejs/FoldKubeEvent.java'
+def apiSource = layout.projectDirectory.file(apiSourcePath)
+def apiOutput = layout.buildDirectory.file('docs/kubejs-api.json')
+def apiJavaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+}
+
+tasks.register('exportKubeJsApi', JavaExec) {
+    group = 'documentation'
+    description = 'Exports KubeJS @Info/@Param annotations as deterministic JSON.'
+    classpath = sourceSets.apiDocs.runtimeClasspath
+    mainClass = 'ExportKubeJsApi'
+    javaLauncher = apiJavaLauncher
+    inputs.file(apiSource).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.file(apiOutput)
+    args apiSource.asFile.absolutePath, apiOutput.get().asFile.absolutePath, apiSourcePath
+}
+
+tasks.register('checkKubeJsApi', Exec) {
+    group = 'verification'
+    description = 'Checks API export contracts using the documentation Java toolchain.'
+    dependsOn 'exportKubeJsApi'
+    commandLine 'node', '--test', 'scripts/kubejs-api.test.mjs'
+    doFirst {
+        environment 'KUBEJS_DOCS_JAVA', apiJavaLauncher.get().executablePath.asFile.absolutePath
+    }
+}

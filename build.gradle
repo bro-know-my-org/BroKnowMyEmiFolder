@@ -47,6 +47,8 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
+apply from: 'gradle/docs.gradle'
+
 neoForge {
     version = project.neo_version
 

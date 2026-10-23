@@ -19,3 +19,10 @@ hs_err_pid*
 
 # Common working directory
 run
+
+# Documentation dependencies and generated output
+node_modules/
+.pnpm-store/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+docs/api/kubejs.md
