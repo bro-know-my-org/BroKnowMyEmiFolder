@@ -12,6 +12,8 @@
 
 Bro Know My EMI Folder is an EMI addon for Minecraft 1.21.1 / NeoForge. It adds collapsible groups to EMI's index sidebar, with group definitions driven by KubeJS.
 
+Read the [documentation](https://emi-folder.bro-know-my.org/) for guides and the generated KubeJS API reference.
+
 The folding behavior is inspired by REI's collapsible entries. Friendly link: [RoughlyEnoughItems](https://github.com/shedaniel/RoughlyEnoughItems).
 
 ## Features
@@ -118,6 +120,8 @@ Open EMI's settings from the bottom-left EMI button. The `BKMEF` group adds:
 
 Bro Know My EMI Folder 是一个适用于 Minecraft 1.21.1 / NeoForge 的 EMI 附属模组。它为 EMI 的索引侧边栏添加可折叠分组，并通过 KubeJS 定义分组内容。
 
+使用指南和自动生成的 KubeJS 接口参考见[文档站](https://emi-folder.bro-know-my.org/)。
+
 这个折叠行为受到 REI collapsible entries 的启发。友情链接：[RoughlyEnoughItems](https://github.com/shedaniel/RoughlyEnoughItems)。
 
 ## 功能
@@ -217,3 +221,26 @@ event.fold('my_pack:wooden_block_items', '木质方块物品', {
 
 - `启用 EMI 索引折叠`：关闭或开启折叠索引，不需要删除 KubeJS 脚本。
 - `显示折叠重载播报`：关闭或开启折叠分组加载/重载后的聊天栏提示。
+
+## 文档开发
+
+需要 JDK 21、Node.js 24 LTS 和 `package.json` 指定的 pnpm 版本。
+
+```sh
+pnpm install --frozen-lockfile
+pnpm docs:dev
+```
+
+- `pnpm docs:generate`：Gradle 从 `FoldKubeEvent.java` 的 `@Info` / `@Param` 导出 `build/docs/kubejs-api.json`，再生成 `docs/api/kubejs.md`。
+- `pnpm docs:build`：重新生成接口参考，检查导出契约并构建 VitePress；输出为 `docs/.vitepress/dist/`。
+- `pnpm docs:preview`：预览已构建的站点。
+
+接口注解的描述使用英文原文；方法和参数说明必须是非空字符串字面量或 Java 文本块，`params` 支持注解数组或单个 `@Param` 简写。新增公开方法及参数时补齐注解，过期或缺失的参数说明会阻止构建。Rhino 自动注入的首位 `Context` 参数不展示在脚本签名里；`Object` 的具体可传值通过参数说明解释。
+
+生成产物无需提交。教程维护在 `docs/`，页面通过代码片段导入引用示例脚本。修改接口注解后，重新运行 `pnpm docs:generate` 即可更新本地开发页面。
+
+CI 在 PR 中校验文档，`master` 更新后自动部署到 GitHub Pages。站点域名为 `emi-folder.bro-know-my.org`，使用默认根路径；`docs/public/CNAME` 随静态站点一同输出。仓库 Pages 的 Source 使用 GitHub Actions，Custom domain 与 CNAME 保持一致。
+
+Cloudflare DNS 添加 CNAME：名称 `emi-folder`，目标 `bro-know-my-org.github.io`，代理状态为 DNS only，TTL 为 Auto。DNS 生效且 GitHub 证书签发完成后，在仓库 Pages 设置中启用 Enforce HTTPS。
+
+首次部署及证书验证通过后，可启用 Cloudflare 代理（橙云），SSL/TLS 使用 Full (strict)。缓存规则仅匹配文档子域名：`/assets/` 中的构建资源在边缘和浏览器缓存一年，其余页面在边缘缓存 5 分钟、浏览器不缓存；400–599 响应不缓存。更新页面最多需要等待 5 分钟，带哈希的资源文件名会随内容变化。
