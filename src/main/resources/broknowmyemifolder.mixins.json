@@ -10,7 +10,9 @@
     "EmiScreenManagerMixin",
     "EmiScreenSpaceMixin",
     "EmiSearchWorkerMixin",
-    "EmiSidebarsMixin"
+    "EmiSidebarsMixin",
+    "RemiGroupStackMixin",
+    "RemiGroupedStackMixin"
   ],
   "injectors": {
     "defaultRequire": 1

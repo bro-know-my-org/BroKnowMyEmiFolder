@@ -62,6 +62,7 @@ neoForge {
             client()
             gameDirectory = project.file('run')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'bkmef.compatSmoke', providers.gradleProperty('compatSmoke').isPresent().toString()
         }
 
         server {
@@ -74,6 +75,9 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            if (providers.gradleProperty('compatSmoke').isPresent()) {
+                sourceSet(sourceSets.test)
+            }
         }
     }
 }
@@ -136,8 +140,18 @@ def foldRegistryProbe = tasks.register("foldRegistryProbe", JavaExec) {
     }
 }
 
+def foldCompatibilityProbe = tasks.register("foldCompatibilityProbe", JavaExec) {
+    group = "verification"
+    description = "Checks coexistence with independently managed sidebar groups."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "io.github.broknowmyorg.bkmef.emi.FoldCompatibilityProbe"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 tasks.named("check") {
-    dependsOn(foldLayoutProbe, foldColorProbe, foldRegistryProbe)
+    dependsOn(foldLayoutProbe, foldColorProbe, foldRegistryProbe, foldCompatibilityProbe)
 }
 
 def generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

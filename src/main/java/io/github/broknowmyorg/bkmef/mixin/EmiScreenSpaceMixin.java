@@ -1,20 +1,20 @@
 package io.github.broknowmyorg.bkmef.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.config.SidebarType;
-import dev.emi.emi.runtime.EmiSidebars;
 import dev.emi.emi.screen.EmiScreenManager;
 import dev.emi.emi.screen.StackBatcher;
 import dev.emi.emi.search.EmiSearch;
 import io.github.broknowmyorg.bkmef.emi.FoldLayoutContext;
+import io.github.broknowmyorg.bkmef.emi.FoldRegistry;
 import io.github.broknowmyorg.bkmef.emi.FoldedSidebarRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
@@ -23,24 +23,23 @@ public class EmiScreenSpaceMixin {
     @Unique
     private List<? extends EmiIngredient> bkmef$renderedStacks;
 
-    @Inject(method = "getStacks", at = @At("HEAD"), cancellable = true, remap = false)
-    private void bkmef$getFoldedLayout(CallbackInfoReturnable<List<? extends EmiIngredient>> cir) {
+    @WrapMethod(method = "getStacks", remap = false)
+    private List<? extends EmiIngredient> bkmef$getFoldedLayout(Operation<List<? extends EmiIngredient>> original) {
         EmiScreenManager.ScreenSpace space = (EmiScreenManager.ScreenSpace) (Object) this;
         if (space.getType() != SidebarType.INDEX) {
-            return;
+            return original.call();
         }
         if (space.search && EmiSearch.compiledQuery != null && !EmiSearch.compiledQuery.isEmpty()) {
-            return;
+            return FoldRegistry.decorateSearch(original.call());
         }
-        // The search sidebar also uses searchedStacks for an empty query. That
-        // list was folded without row widths and can omit slots after wrapping.
-        // Build both empty-search and regular index layouts from the same source.
-        cir.setReturnValue(FoldLayoutContext.withLayout(space.widths, space.pageSize,
-                () -> EmiSidebars.getStacks(SidebarType.INDEX)));
+        // Compose after other addons have selected their source and applied tab filters.
+        // The context also rebuilds an empty-search index for this sidebar's row widths.
+        return FoldLayoutContext.withLayout(space.widths, space.pageSize,
+                () -> FoldRegistry.foldIndex(original.call()));
     }
 
-    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Ldev/emi/emi/screen/StackBatcher;begin(III)V"), remap = false)
-    private void bkmef$refreshLayoutBatch(StackBatcher batcher, int x, int y, int z) {
+    @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Ldev/emi/emi/screen/StackBatcher;begin(III)V"), remap = false)
+    private void bkmef$refreshLayoutBatch(StackBatcher batcher, int x, int y, int z, Operation<Void> original) {
         List<? extends EmiIngredient> stacks = ((EmiScreenManager.ScreenSpace) (Object) this).getStacks();
         if (stacks != bkmef$renderedStacks) {
             bkmef$renderedStacks = stacks;
@@ -48,13 +47,13 @@ public class EmiScreenSpaceMixin {
             // Invalidate before begin() so both use the new positions this frame.
             batcher.repopulate();
         }
-        batcher.begin(x, y, z);
+        original.call(batcher, x, y, z);
     }
 
-    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Ldev/emi/emi/screen/StackBatcher;render(Ldev/emi/emi/api/stack/EmiIngredient;Lnet/minecraft/client/gui/GuiGraphics;IIF)V"), remap = false)
-    private void bkmef$renderFoldedSidebar(StackBatcher batcher, EmiIngredient stack, GuiGraphics draw, int x, int y, float delta) {
+    @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Ldev/emi/emi/screen/StackBatcher;render(Ldev/emi/emi/api/stack/EmiIngredient;Lnet/minecraft/client/gui/GuiGraphics;IIF)V"), remap = false)
+    private void bkmef$renderFoldedSidebar(StackBatcher batcher, EmiIngredient stack, GuiGraphics draw, int x, int y, float delta, Operation<Void> original) {
         if (!FoldedSidebarRenderer.render(batcher, stack, draw, (EmiScreenManager.ScreenSpace) (Object) this, x, y, delta)) {
-            batcher.render(stack, draw, x, y, delta);
+            original.call(batcher, stack, draw, x, y, delta);
         }
     }
 }

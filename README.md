@@ -19,6 +19,7 @@ Your groups, your rules. Customize what folds together and how it looks with Kub
 - **Choose the contents.** Group items and fluids by ID, tag, mod, or combined filters. Exclude individual entries, or let an item belong to several folders.
 - **Choose the look.** Set folder names, translations, colors, and card spacing. Use fixed colors, a rainbow, or randomly assigned colors.
 - **Keep browsing naturally.** Left-click to expand; Alt + left-click a member to collapse. Search finds individual items inside folders and deduplicates overlapping results.
+- **Use Reliable EMI alongside it.** The same item can belong to script folders and REMI groups, with independent expansion and creative-tab filtering. Tested with REMI 4.8.0 on Minecraft 1.21.1 / NeoForge.
 - **Performance and polish.** Indexed matching and cached layouts reduce repeated work; group reloads take effect together, with careful handling of row boundaries and colors. [Under the hood](https://github.com/bro-know-my-org/BroKnowMyEmiFolder/blob/master/src/main/java/io/github/broknowmyorg/bkmef/emi/FoldRegistry.java).
 
 ![Custom folder colors and card spacing in the English game client](https://raw.githubusercontent.com/bro-know-my-org/BroKnowMyEmiFolder/master/docs/public/images/folders-en.webp)
@@ -42,6 +43,7 @@ Your groups, your rules. Customize what folds together and how it looks with Kub
 - **内容自由组合。** 按 ID、标签、模组或组合条件归类物品与流体；可以排除指定条目，也可以让一个物品同时属于多个组。
 - **外观自己决定。** 自定义组名、翻译、颜色和卡片间距，支持固定色、彩虹色和随机配色。
 - **照常浏览和搜索。** 左键展开，Alt + 左键点击成员收起。搜索直接显示组内匹配的物品，跨组重复的结果只显示一次。
+- **与 Reliable EMI 共存。** 同一物品可以同时归属脚本组和 REMI 组，各自独立展开、收起，并保留创造分类筛选。已验证 Minecraft 1.21.1 / NeoForge 下的 REMI 4.8.0。
 - **性能与细节也有打磨。** 索引与缓存减少重复计算，分组重载整体生效，跨行布局与配色也经过专门处理。[了解实现](https://github.com/bro-know-my-org/BroKnowMyEmiFolder/blob/master/src/main/java/io/github/broknowmyorg/bkmef/emi/FoldRegistry.java)。
 
 ![中文客户端中的自定义分组颜色与卡片间距](https://raw.githubusercontent.com/bro-know-my-org/BroKnowMyEmiFolder/master/docs/public/images/folders-zh.webp)

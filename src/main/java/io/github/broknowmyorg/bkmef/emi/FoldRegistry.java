@@ -7,14 +7,18 @@ import io.github.broknowmyorg.bkmef.Broknowmyemifolder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.RandomAccess;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -31,6 +35,9 @@ public final class FoldRegistry {
     private static List<? extends EmiIngredient> cachedSource;
     private static int cachedVersion = -1;
     private static FoldMembership cachedMembership;
+    private static List<? extends EmiIngredient> cachedSearchSource;
+    private static List<? extends EmiIngredient> cachedSearchResult;
+    private static int cachedSearchVersion = -1;
     private static final Map<FoldLayoutContext.Key, List<? extends EmiIngredient>> CACHED_LAYOUTS = new LinkedHashMap<>();
 
     private FoldRegistry() {
@@ -125,6 +132,9 @@ public final class FoldRegistry {
     }
 
     public static synchronized List<? extends EmiIngredient> foldIndex(List<? extends EmiIngredient> source) {
+        if (source instanceof FoldedIndex index) {
+            source = index.source;
+        }
         RegistryState state = active;
         if (!BkmefClientConfig.isFoldingEnabled() || state.groups.isEmpty() || source.isEmpty()) {
             return source;
@@ -169,12 +179,40 @@ public final class FoldRegistry {
             );
         }
 
-        cachedFolded = List.copyOf(folded);
+        cachedFolded = new FoldedIndex(source, List.copyOf(folded));
         if (CACHED_LAYOUTS.size() >= 3) {
             CACHED_LAYOUTS.remove(CACHED_LAYOUTS.keySet().iterator().next());
         }
         CACHED_LAYOUTS.put(layoutKey, cachedFolded);
         return cachedFolded;
+    }
+
+    public static synchronized List<? extends EmiIngredient> decorateSearch(List<? extends EmiIngredient> source) {
+        if (!BkmefClientConfig.isFoldingEnabled() || active.groups.isEmpty() || source.isEmpty()) {
+            return source;
+        }
+        if (source == cachedSearchSource && version == cachedSearchVersion) {
+            return cachedSearchResult;
+        }
+        List<EmiIngredient> result = new ArrayList<>(source.size());
+        Map<EmiStack, SearchFoldMemberEmiIngredient> members = new HashMap<>();
+        for (EmiIngredient ingredient : source) {
+            EmiStack stack = representativeStack(ingredient);
+            List<FoldGroup> groups = stack == null || ingredient instanceof ExternalFoldGroup
+                    || ingredient instanceof SearchFoldMemberEmiIngredient
+                ? List.of() : matchingGroups(active, new StackFacts(stack));
+            if (groups.isEmpty()) {
+                result.add(ingredient);
+            } else {
+                for (FoldGroup group : groups) {
+                    SearchFoldMemberEmiIngredient.addOrMerge(result, members, stack, group);
+                }
+            }
+        }
+        cachedSearchSource = source;
+        cachedSearchVersion = version;
+        cachedSearchResult = List.copyOf(result);
+        return cachedSearchResult;
     }
 
     public static synchronized boolean isExpanded(FoldGroup group) {
@@ -214,18 +252,34 @@ public final class FoldRegistry {
         Map<FoldGroup, List<EmiIngredient>> matchedGroups = new LinkedHashMap<>();
         Map<EmiIngredient, List<FoldGroup>> membership = new IdentityHashMap<>();
         int membershipCount = 0;
+        Set<EmiIngredient> expandedMembers = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (EmiIngredient ingredient : source) {
+            if (ingredient instanceof ExternalFoldGroup external && external.bkmef$isExpanded()) {
+                expandedMembers.addAll(external.bkmef$getMembers());
+            }
+        }
+        Map<FoldGroup, Set<EmiIngredient>> seen = new IdentityHashMap<>();
 
         for (EmiIngredient ingredient : source) {
-            EmiStack stack = representativeStack(ingredient);
-            List<FoldGroup> groups = stack == null ? List.of() : matchingGroups(state, new StackFacts(stack));
-            if (groups.isEmpty()) {
+            if (expandedMembers.contains(ingredient)) {
                 continue;
             }
-
-            membership.put(ingredient, groups);
-            membershipCount += groups.size();
-            for (FoldGroup group : groups) {
-                matchedGroups.computeIfAbsent(group, ignored -> new ArrayList<>()).add(ingredient);
+            List<? extends EmiIngredient> candidates = ingredient instanceof ExternalFoldGroup external
+                ? external.bkmef$getMembers() : List.of(ingredient);
+            Set<FoldGroup> owners = new LinkedHashSet<>();
+            for (EmiIngredient candidate : candidates) {
+                EmiStack stack = representativeStack(candidate);
+                List<FoldGroup> groups = stack == null ? List.of() : matchingGroups(state, new StackFacts(stack));
+                owners.addAll(groups);
+                for (FoldGroup group : groups) {
+                    if (seen.computeIfAbsent(group, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(candidate)) {
+                        matchedGroups.computeIfAbsent(group, ignored -> new ArrayList<>()).add(candidate);
+                        membershipCount++;
+                    }
+                }
+            }
+            if (!owners.isEmpty()) {
+                membership.put(ingredient, List.copyOf(owners));
             }
         }
 
@@ -249,6 +303,10 @@ public final class FoldRegistry {
                 if (emittedGroups.add(group)) {
                     emitGroup(folded, group, foldMembership.ingredientsFor(group));
                 }
+            }
+            // Keep the foreign header and its expanded children together, unchanged.
+            if (ingredient instanceof ExternalFoldGroup) {
+                folded.add(ingredient);
             }
         }
 
@@ -395,6 +453,20 @@ public final class FoldRegistry {
         private final List<FoldGroup> fallbackGroups = new ArrayList<>();
         private final Map<FoldGroup, Integer> groupOrder = new IdentityHashMap<>();
         private boolean groupIndexDirty = true;
+    }
+
+    /** Retain the raw source so a cached/empty-search result can be laid out for another sidebar. */
+    private static final class FoldedIndex extends AbstractList<EmiIngredient> implements RandomAccess {
+        private final List<? extends EmiIngredient> source;
+        private final List<EmiIngredient> entries;
+
+        private FoldedIndex(List<? extends EmiIngredient> source, List<EmiIngredient> entries) {
+            this.source = source;
+            this.entries = entries;
+        }
+
+        @Override public EmiIngredient get(int index) { return entries.get(index); }
+        @Override public int size() { return entries.size(); }
     }
 
     private record FoldMembership(Map<FoldGroup, List<EmiIngredient>> matchedGroups,

@@ -45,8 +45,6 @@ public class EmiScreenManagerMixin {
                 return;
             } else if (ingredient instanceof ExpandedFoldEmiIngredient expanded) {
                 group = expanded.getGroup();
-            } else {
-                group = FoldRegistry.getExpandedGroupFor(ingredient);
             }
         }
 
