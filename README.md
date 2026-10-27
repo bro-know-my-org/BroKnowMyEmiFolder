@@ -1,246 +1,89 @@
 # Bro Know My EMI Folder
 
-[![Latest release](https://img.shields.io/github/v/release/bro-know-my-org/BroKnowMyEmiFolder?style=flat-square&logo=github)](https://github.com/bro-know-my-org/BroKnowMyEmiFolder/releases/latest)
-[![CurseForge downloads](https://img.shields.io/curseforge/dt/1564728?style=flat-square&logo=curseforge&label=CurseForge%20downloads&color=F16436)](https://www.curseforge.com/projects/1564728)
+[![Latest release](https://img.shields.io/github/v/release/bro-know-my-org/BroKnowMyEmiFolder?style=flat-square)](https://github.com/bro-know-my-org/BroKnowMyEmiFolder/releases/latest)
+[![CurseForge downloads](https://img.shields.io/curseforge/dt/1564728?style=flat-square&logo=curseforge&color=F16436)](https://www.curseforge.com/projects/1564728)
 [![MIT license](https://flat.badgen.net/github/license/bro-know-my-org/BroKnowMyEmiFolder)](LICENSE)
 
-[![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-62B47A?style=flat-square)](https://www.minecraft.net/)
-[![NeoForge](https://img.shields.io/badge/Loader-NeoForge-F99A36?style=flat-square)](https://neoforged.net/)
-[![Java 21](https://img.shields.io/badge/Java-21-007396?style=flat-square)](https://adoptium.net/temurin/releases/?version=21)
+[English](#english) · [简体中文](#简体中文)
 
-[English](#bro-know-my-emi-folder) | [中文](#中文)
+**[Documentation & changelog / 文档与更新记录 →](https://emi-folder.bro-know-my.org/)**
 
-Bro Know My EMI Folder is an EMI addon for Minecraft 1.21.1 / NeoForge. It adds collapsible groups to EMI's index sidebar, with group definitions driven by KubeJS.
+## English
 
-Read the [documentation](https://emi-folder.bro-know-my.org/) for guides and the generated KubeJS API reference.
+Turn a crowded EMI sidebar into collapsible folders defined by your modpack. BKMEF is an EMI addon for **Minecraft 1.21.1 · NeoForge**, with **KubeJS** scripts controlling what goes in each folder and how it looks.
 
-The folding behavior is inspired by REI's collapsible entries. Friendly link: [RoughlyEnoughItems](https://github.com/shedaniel/RoughlyEnoughItems).
+### Make it yours
 
-## Features
+- **Choose the contents.** Group items and fluids by ID, tag, mod, or combined filters. Exclude individual entries, or let an item belong to several folders.
+- **Choose the look.** Set folder names, translations, colors, and card spacing. Use fixed colors, a rainbow, or randomly assigned colors.
+- **Keep browsing naturally.** Left-click to expand; Alt + left-click a member to collapse. Search finds individual items inside folders and deduplicates overlapping results.
 
-- Collapse EMI index entries into KubeJS-defined groups.
-- Search still works for folded entries. Searching for a folded member shows the matching stack.
-- Search results are automatically deduplicated. If one stack belongs to multiple fold groups, it appears once and its tooltip lists every owning group.
-- One item can belong to multiple fold groups in the normal EMI index.
-- Left-click a collapsed group to expand it. Alt-left-click an expanded member to collapse its group.
-- Folded previews use a card spread layout with configurable spacing and background color.
-- KubeJS `RecipeViewerEvents.groupEntries` definitions are also consumed as fold groups where practical.
+![Custom folder colors and card spacing in the English game client](docs/public/images/folders-en.webp)
 
-## Usage
+*A vanilla-only example with custom names, colors, and card spacing. Folders can stay folded while others are expanded.*
 
-Add a KubeJS client script:
+![English search result showing a diamond shared by two custom folders](docs/public/images/search-en.webp)
 
-```js
-RecipeViewerEvents.fold(event => {
-  event.fold('broknowmyemifolder:ores', 'translate:emi_group.broknowmyemifolder.ores', '#c:ores')
-  event.fold('broknowmyemifolder:tools', 'translate:emi_group.broknowmyemifolder.tools', ['#c:tools', 'minecraft:shears'])
-  event.foldId('broknowmyemifolder:boats', 'translate:emi_group.broknowmyemifolder.boats', ['minecraft:oak_boat', 'minecraft:spruce_boat'], {
-    spread: 4,
-    color: 'rainbow'
-  })
-  event.foldMod('broknowmyemifolder:citadel', 'translate:emi_group.broknowmyemifolder.citadel', '@citadel', {
-    color: 'random'
-  })
-  event.foldSpawnEggs('broknowmyemifolder:spawn_eggs', 'Spawn Eggs', {
-    spread: 4,
-    color: 'random'
-  })
-  event.unfoldAll('quark:seed_pouch')
-})
-```
+*One diamond, two folders: search shows the item once and lists both memberships in its tooltip.*
 
-Group names may be literal text, components, or strings prefixed with `translate:`.
+### Get started
 
-Available methods:
+Install [BKMEF](https://www.curseforge.com/projects/1564728), [EMI](https://modrinth.com/mod/emi), and [KubeJS](https://kubejs.com/) for NeoForge 1.21.1, with their required dependencies. BKMEF requires EMI **1.1.22+** and KubeJS **2101.7.2+**.
 
-```js
-event.fold(id, name, filter, options?)
-event.fold(name, filter, options?)
-event.foldFluid(id, name, filter, options?)
-event.foldFluid(name, filter, options?)
-event.foldId(id, name, ids, options?)
-event.foldId(name, ids, options?)
-event.foldMod(id, name, mods, options?)
-event.foldMod(name, mods, options?)
-event.foldSpawnEggs(id, name, options?)
-event.foldSpawnEggs(name, options?)
-event.unfold(groupId, filter)
-event.unfoldFluid(groupId, filter)
-event.unfoldId(groupId, ids)
-event.unfoldAll(filter)
-event.unfoldAllFluid(filter)
-event.unfoldAllId(ids)
-```
-
-`unfold` removes matching entries from one fold group. `unfoldAll` removes matching entries from every fold group.
-
-`foldMod` folds entries by EMI stack id namespace. It accepts mod ids with or without a leading `@`, such as `'@citadel'`.
-
-`foldSpawnEggs` folds items implemented as Minecraft `SpawnEggItem`, independent of item id naming.
-
-For combined filters, pass a structured object. Plain `#tag` matches item tags; use `blockTag` for the block tags of block items.
-
-```js
-event.fold('my_pack:tools_without_axes', 'Tools Without Axes', {
-  tag: '#c:tools',
-  none: '#c:tools/axes'
-})
-
-event.fold('my_pack:wooden_block_items', 'Wooden Block Items', {
-  mod: 'minecraft',
-  blockTag: '#minecraft:logs'
-})
-```
-
-Options:
-
-```js
-{
-  spread: 4,
-  color: 'rainbow'
-}
-```
-
-`spread` controls the horizontal pixel offset between preview cards. `color` accepts a number, `'#RRGGBB'`, `'rainbow'`, or `'random'`.
-
-Omitting `color` assigns new groups colors from a muted rainbow palette; redefining an existing group id preserves its current color. Backgrounds stay dark; borders and tooltip accents follow the group color in both collapsed and expanded views.
-
-See [KubeJS API](docs/kubejs-api.md) for the supported script methods and options.
-
-## In-game Settings
-
-Open EMI's settings from the bottom-left EMI button. The `BKMEF` group adds:
-
-- `Enable EMI index folding`: disables or enables the folded index entries without removing KubeJS scripts.
-- `Show fold reload messages`: disables or enables the BKMEF chat message shown after fold groups are loaded or reloaded.
-
-## 中文
-
-[English](#bro-know-my-emi-folder) | [中文](#中文)
-
-Bro Know My EMI Folder 是一个适用于 Minecraft 1.21.1 / NeoForge 的 EMI 附属模组。它为 EMI 的索引侧边栏添加可折叠分组，并通过 KubeJS 定义分组内容。
-
-使用指南和自动生成的 KubeJS 接口参考见[文档站](https://emi-folder.bro-know-my.org/)。
-
-这个折叠行为受到 REI collapsible entries 的启发。友情链接：[RoughlyEnoughItems](https://github.com/shedaniel/RoughlyEnoughItems)。
-
-## 功能
-
-- 将 EMI 索引侧边栏中的条目折叠成由 KubeJS 定义的分组。
-- 折叠后仍支持正常搜索。搜索组内物品时，会显示匹配到的具体条目。
-- 搜索结果会自动去重。同一个物品属于多个折叠组时，只显示一次，并在 tooltip 中列出它所属的所有组。
-- 普通 EMI 索引中允许同一个物品进入多个折叠组。
-- 左键点击折叠组展开；Alt+左键点击展开后的成员收起对应组。
-- 折叠预览使用扑克牌式平铺，支持自定义间距和背景颜色。
-- 会尽量兼容 KubeJS 原有的 `RecipeViewerEvents.groupEntries` 定义。
-
-## 使用
-
-添加一个 KubeJS client script：
+Save this as `kubejs/client_scripts/emi_folders.js` in your instance, then launch the game:
 
 ```js
 RecipeViewerEvents.fold(event => {
-  event.fold('broknowmyemifolder:ores', 'translate:emi_group.broknowmyemifolder.ores', '#c:ores')
-  event.fold('broknowmyemifolder:tools', 'translate:emi_group.broknowmyemifolder.tools', ['#c:tools', 'minecraft:shears'])
-  event.foldId('broknowmyemifolder:boats', 'translate:emi_group.broknowmyemifolder.boats', ['minecraft:oak_boat', 'minecraft:spruce_boat'], {
+  event.fold('my_pack:logs', 'Logs', '#minecraft:logs', {
     spread: 4,
-    color: 'rainbow'
+    color: '#68B984'
   })
-  event.foldMod('broknowmyemifolder:citadel', 'translate:emi_group.broknowmyemifolder.citadel', '@citadel', {
-    color: 'random'
-  })
-  event.foldSpawnEggs('broknowmyemifolder:spawn_eggs', '刷怪蛋', {
+  event.unfold('my_pack:logs', 'minecraft:stripped_oak_log')
+})
+```
+
+This folds logs into a green folder while keeping stripped oak logs separate. **You define the folders**; installing the addon alone does not choose groups for your pack.
+
+Find setup instructions, filters, styling options, the KubeJS API, and the changelog on the **[project website](https://emi-folder.bro-know-my.org/)**. The [screenshot example](https://emi-folder.bro-know-my.org/examples#readme-showcase) includes the full script and both translations.
+
+## 简体中文
+
+把拥挤的 EMI 侧栏整理成适合你的整合包的折叠分组。BKMEF 是适用于 **Minecraft 1.21.1 · NeoForge** 的 EMI 附属模组，通过 **KubeJS** 自由定义分组内容和外观。
+
+### 按你的想法整理
+
+- **内容自由组合。** 按 ID、标签、模组或组合条件归类物品与流体；可以排除指定条目，也可以让一个物品同时属于多个组。
+- **外观自己决定。** 自定义组名、翻译、颜色和卡片间距，支持固定色、彩虹色和随机配色。
+- **照常浏览和搜索。** 左键展开，Alt + 左键点击成员收起。搜索直接显示组内匹配的物品，跨组重复的结果只显示一次。
+
+![中文客户端中的自定义分组颜色与卡片间距](docs/public/images/folders-zh.webp)
+
+*仅用原版物品演示自定义组名、配色和卡片间距；不同分组可以分别展开或保持折叠。*
+
+![中文搜索结果：钻石同时属于两个自定义分组](docs/public/images/search-zh.webp)
+
+*一颗钻石，两个分组：搜索结果只出现一次，悬停提示列出它所属的两个组。*
+
+### 开始使用
+
+安装适用于 NeoForge 1.21.1 的 [BKMEF](https://www.curseforge.com/projects/1564728)、[EMI](https://modrinth.com/mod/emi)、[KubeJS](https://kubejs.com/) 及其前置依赖。需要 EMI **1.1.22+**、KubeJS **2101.7.2+**。
+
+在游戏实例的 `kubejs/client_scripts/emi_folders.js` 中写入，然后启动游戏：
+
+```js
+RecipeViewerEvents.fold(event => {
+  event.fold('my_pack:logs', '原木', '#minecraft:logs', {
     spread: 4,
-    color: 'random'
+    color: '#68B984'
   })
-  event.unfoldAll('quark:seed_pouch')
+  event.unfold('my_pack:logs', 'minecraft:stripped_oak_log')
 })
 ```
 
-组名可以是普通文本、文本组件，或带 `translate:` 前缀的翻译键字符串。
+这会把原木收进绿色分组，同时让去皮橡木原木单独显示。**分组由你定义**，仅安装模组不会自动替整合包分类。
 
-可用方法：
+安装指南、过滤规则、外观选项、KubeJS 接口和更新记录统一见 **[项目网站](https://emi-folder.bro-know-my.org/)**。[截图示例](https://emi-folder.bro-know-my.org/examples#readme-showcase)提供完整脚本和中英文翻译。
 
-```js
-event.fold(id, name, filter, options?)
-event.fold(name, filter, options?)
-event.foldFluid(id, name, filter, options?)
-event.foldFluid(name, filter, options?)
-event.foldId(id, name, ids, options?)
-event.foldId(name, ids, options?)
-event.foldMod(id, name, mods, options?)
-event.foldMod(name, mods, options?)
-event.foldSpawnEggs(id, name, options?)
-event.foldSpawnEggs(name, options?)
-event.unfold(groupId, filter)
-event.unfoldFluid(groupId, filter)
-event.unfoldId(groupId, ids)
-event.unfoldAll(filter)
-event.unfoldAllFluid(filter)
-event.unfoldAllId(ids)
-```
+---
 
-`unfold` 会把匹配条目从指定折叠组里拿出来。`unfoldAll` 会把匹配条目从所有折叠组里拿出来。
-
-`foldMod` 会按 EMI stack id 的命名空间折叠条目。它接受带或不带 `@` 前缀的 mod id，例如 `'@citadel'`。
-
-`foldSpawnEggs` 会折叠底层实现为 Minecraft `SpawnEggItem` 的物品，不依赖物品 id 是否以 `_spawn_egg` 结尾。
-
-复杂过滤可以传结构化对象。普通 `#tag` 匹配的是物品 tag；如果要按方块物品对应方块的方块 tag 过滤，用 `blockTag`。
-
-```js
-event.fold('my_pack:tools_without_axes', '非斧工具', {
-  tag: '#c:tools',
-  none: '#c:tools/axes'
-})
-
-event.fold('my_pack:wooden_block_items', '木质方块物品', {
-  mod: 'minecraft',
-  blockTag: '#minecraft:logs'
-})
-```
-
-可选参数：
-
-```js
-{
-  spread: 4,
-  color: 'rainbow'
-}
-```
-
-`spread` 控制预览卡片之间的横向像素偏移。`color` 支持数字、`'#RRGGBB'`、`'rainbow'` 或 `'random'`。
-
-省略 `color` 时，新分组按注册顺序分配柔和彩虹色；重新定义已有分组 id 时保留原配色。背景保持深色，折叠框、展开框和提示文字的强调色跟随所属分组。
-
-支持的脚本方法和参数见 [KubeJS API](docs/kubejs-api.md)。
-
-## 游戏内设置
-
-从左下角 EMI 按钮打开 EMI 设置。`BKMEF` 分组里有：
-
-- `启用 EMI 索引折叠`：关闭或开启折叠索引，不需要删除 KubeJS 脚本。
-- `显示折叠重载播报`：关闭或开启折叠分组加载/重载后的聊天栏提示。
-
-## 文档开发
-
-需要 JDK 21、Node.js 24 LTS 和 `package.json` 指定的 pnpm 版本。
-
-```sh
-pnpm install --frozen-lockfile
-pnpm docs:dev
-```
-
-- `pnpm docs:generate`：Gradle 从 `FoldKubeEvent.java` 的 `@Info` / `@Param` 导出 `build/docs/kubejs-api.json`，再生成 `docs/api/kubejs.md`。
-- `pnpm docs:build`：重新生成接口参考，检查导出契约并构建 VitePress；输出为 `docs/.vitepress/dist/`。
-- `pnpm docs:preview`：预览已构建的站点。
-
-接口注解的描述使用英文原文；方法和参数说明必须是非空字符串字面量或 Java 文本块，`params` 支持注解数组或单个 `@Param` 简写。新增公开方法及参数时补齐注解，过期或缺失的参数说明会阻止构建。Rhino 自动注入的首位 `Context` 参数不展示在脚本签名里；`Object` 的具体可传值通过参数说明解释。
-
-生成产物无需提交。教程维护在 `docs/`，页面通过代码片段导入引用示例脚本。修改接口注解后，重新运行 `pnpm docs:generate` 即可更新本地开发页面。
-
-CI 在 PR 中校验文档，`master` 更新后自动部署到 GitHub Pages。站点域名为 `emi-folder.bro-know-my.org`，使用默认根路径；`docs/public/CNAME` 随静态站点一同输出。仓库 Pages 的 Source 使用 GitHub Actions，Custom domain 与 CNAME 保持一致。
-
-Cloudflare DNS 添加 CNAME：名称 `emi-folder`，目标 `bro-know-my-org.github.io`，代理状态为 DNS only，TTL 为 Auto。DNS 生效且 GitHub 证书签发完成后，在仓库 Pages 设置中启用 Enforce HTTPS。
-
-首次部署及证书验证通过后，可启用 Cloudflare 代理（橙云），SSL/TLS 使用 Full (strict)。缓存规则仅匹配文档子域名：`/assets/` 中的构建资源在边缘和浏览器缓存一年，其余页面在边缘缓存 5 分钟、浏览器不缓存；400–599 响应不缓存。更新页面最多需要等待 5 分钟，带哈希的资源文件名会随内容变化。
+[Report an issue / 反馈问题](https://github.com/bro-know-my-org/BroKnowMyEmiFolder/issues) · [MIT](LICENSE) · Inspired by / 折叠交互灵感来自 [REI](https://github.com/shedaniel/RoughlyEnoughItems)
