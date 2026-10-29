@@ -20,7 +20,7 @@ on:
           - beta
           - alpha
       release_notes:
-        description: "Release notes body. Leave empty for a short automatic note."
+        description: "Release notes body. Leave empty to use CHANGELOG.md or generate notes from commits."
         required: false
         type: string
 
@@ -97,14 +97,16 @@ jobs:
           cp "${jars[0]}" release-assets/
           echo "jar=release-assets/$(basename "${jars[0]}")" >> "$GITHUB_OUTPUT"
 
+      - name: Set up Node.js for release notes
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Check release notes generator
+        run: node --test scripts/release-notes.test.mjs
+
       - name: Write release notes
-        shell: bash
-        run: |
-          NOTES="$RELEASE_NOTES"
-          if [ -z "$NOTES" ]; then
-            NOTES="Automated build for $RELEASE_VERSION."
-          fi
-          printf '%s\n' "$NOTES" > CHANGELOG_RELEASE.md
+        run: node scripts/generate-release-notes.mjs
         env:
           RELEASE_VERSION: ${{ steps.vars.outputs.version }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
